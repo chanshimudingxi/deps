@@ -1,0 +1,243 @@
+#include "udp_socket.h"
+
+UdpSocket::UdpSocket(SocketContainer *pContainer, ProtoParser* handler){
+    m_container = pContainer;
+    m_handler = handler;
+    m_fd = -1;
+    m_state = SocketState::close;
+	m_type = SocketType::udp;
+    m_createTime = 0;
+    m_lastAccessTime = 0;
+    m_timeout = 0;
+}
+
+UdpSocket::~UdpSocket(){
+    m_container = nullptr;
+    m_handler = nullptr;
+    m_fd = -1;
+    m_state = SocketState::close;
+	m_type = SocketType::udp;
+    m_createTime = 0;
+    m_lastAccessTime = 0;
+    m_timeout = 0;
+}
+
+void UdpSocket::SetRecvBufferSize(uint32_t size)
+{
+	uint32_t setSize = size;
+	uint32_t oldSize = 0;
+	uint32_t optSize  = sizeof(uint32_t);
+
+	getsockopt(m_fd, SOL_SOCKET, SO_RCVBUF,(void *)&oldSize, &optSize); 
+
+	if( -1 == setsockopt(m_fd, SOL_SOCKET, SO_RCVBUFFORCE, (void *)&setSize, sizeof(setSize)) ){
+		LOG_ERROR("upd fd:%d recv buffer old size:%u set size:%u failed", m_fd, oldSize, size);
+	}
+
+	getsockopt(m_fd, SOL_SOCKET, SO_RCVBUF, (void *)&setSize, &optSize); 
+
+	LOG_INFO("upd fd:%d recv buffer old size:%u set size:%u new size:%u", m_fd, oldSize, size, setSize);
+}
+
+void UdpSocket::SetSendBufferSize(uint32_t size)
+{
+	uint32_t setSize = size;
+	uint32_t oldSize = 0;
+	uint32_t optSize  = sizeof(uint32_t);
+
+	getsockopt(m_fd, SOL_SOCKET, SO_SNDBUF,(void *)&oldSize, &optSize); 
+
+	if( -1 == setsockopt(m_fd, SOL_SOCKET, SO_SNDBUFFORCE, (void *)&setSize, sizeof(setSize)) ){
+		LOG_ERROR("upd fd:%d send buffer old size:%u set size:%u failed", m_fd, oldSize, size);
+	}
+
+	getsockopt(m_fd, SOL_SOCKET, SO_SNDBUF, (void *)&setSize, &optSize); 
+
+	LOG_INFO("upd fd:%d send buffer old size:%u set size:%u new size:%u", m_fd, oldSize, size, setSize);
+}
+
+void UdpSocket::HandleRead(){
+	LOG_DEBUG("udp fd:%d socket:%p state:%s read", m_fd, this, toString(m_state).c_str());
+	Read();
+}
+
+void UdpSocket::HandleWrite(){
+    LOG_ERROR("udp fd:%d socket:%p state:%s write", m_fd, this, toString(m_state).c_str());
+}
+
+void UdpSocket::HandleError(){
+    LOG_ERROR("udp fd:%d socket:%p state:%s error", m_fd, this, toString(m_state).c_str());
+    Close();
+}
+
+void UdpSocket::HandleTimeout(){
+    time_t now = time(NULL);
+    if(m_state == SocketState::listen){
+        if(m_timeout > 0 && m_lastAccessTime > 0 && m_lastAccessTime + m_timeout < now){
+            LOG_ERROR("udp fd:%d socket:%p idle_time:%d timeout:%d", 
+				m_fd, this, (int)(now - m_lastAccessTime), m_timeout);
+            Close(); 
+        }
+    }
+}
+
+bool UdpSocket::Listen(int port, int backlog, SocketContainer *pContainer, ProtoParser* handler){
+	int fd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (fd == -1) {
+        LOG_ERROR("udp %s", strerror(errno));
+		return false;
+	}
+
+	int flags = fcntl(fd, F_GETFL, 0);
+	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
+		LOG_ERROR("udp fd:%d %s", fd, strerror(errno));
+        return false;
+	}
+
+    int reuse = 1;
+	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int)) == -1) {
+		LOG_ERROR("udp fd:%d %s", fd, strerror(errno));
+        return false;
+	}
+
+	struct sockaddr_in addr;
+	bzero(&addr, sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(port);
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
+		LOG_ERROR("udp fd:%d %s", fd, strerror(errno));
+        return false;
+	}
+
+    UdpSocket *s = new UdpSocket(pContainer, handler);
+    s->SetFd(fd);
+    s->SetCreateTime(time(NULL));
+    s->SetLastAccessTime(s->GetCreateTime());
+    s->SetState(SocketState::listen);
+	LOG_DEBUG("udp fd:%d socket:%p new socket", fd, s);
+    if(!pContainer->AddSocket(s, SOCKET_EVENT_READ|SOCKET_EVENT_ERROR)){
+        LOG_ERROR("fd:%d add events failed", fd);
+        s->Close();
+        return false;
+    }
+
+	s->SetRecvBufferSize(UDP_RECV_BUFF_SIZE);
+	s->SetSendBufferSize(UDP_SEND_BUFF_SIZE);
+    LOG_INFO("udp fd:%d socket:%p listen port:%d", fd, s, port);
+    return true;
+}
+
+bool UdpSocket::Connect(uint32_t ip, int port, SocketContainer *pContainer, ProtoParser* handler, int* connectedfd){
+    int fd = socket(AF_INET,SOCK_DGRAM,0);
+    if(fd == -1){
+        LOG_ERROR("udp %s",strerror(errno));
+        return false; 
+    }
+
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
+        LOG_ERROR("udp fd:%d %s",fd,strerror(errno));
+        return false;
+    }
+
+    struct sockaddr_in peerAddr;
+    bzero(&peerAddr,sizeof(peerAddr));
+    peerAddr.sin_family=AF_INET;
+    peerAddr.sin_port=htons(port);
+    peerAddr.sin_addr.s_addr=ip;
+
+    UdpSocket *s = new UdpSocket(pContainer, handler);
+    s->SetFd(fd);
+    s->SetCreateTime(time(NULL));
+    s->SetLastAccessTime(s->GetCreateTime());
+    s->SetPeerAddr(peerAddr);
+	LOG_DEBUG("udp fd:%d socket:%p new socket", fd, s);
+    s->SetState(SocketState::connected);
+    if(pContainer->AddSocket(s, SOCKET_EVENT_READ|SOCKET_EVENT_ERROR)){
+        *connectedfd = s->GetFd();
+        return true;
+    }
+
+    LOG_ERROR("udp fd:%d socket:%p %s",fd, s, strerror(errno));
+    s->Close();
+    *connectedfd = -1;
+    return false;
+}
+
+void UdpSocket::Close(){
+    //连接容器中删除描述符
+    m_container->DelSocket(this);
+
+    if(m_fd != -1){
+        //关闭描述符 
+        close(m_fd);
+    }
+
+    m_fd = -1;
+    m_state = SocketState::close;
+    m_createTime = 0;
+    m_lastAccessTime = 0;
+}
+
+void UdpSocket::Read(){
+    SetLastAccessTime(time(NULL));
+	sockaddr_in sock;
+	socklen_t sock_size = sizeof(sock);
+    
+	int n = recvfrom(m_fd, m_buffer, READ_RECV_BUFF_SIZE, 0, (sockaddr*)(&sock), &sock_size);
+    if (n == -1) {
+        if(errno == EAGAIN){
+			return;
+		}
+		else{
+			LOG_ERROR("udp fd:%d socket:%p %s",m_fd, this, strerror(errno));
+            Close();
+            return;
+		}
+    }
+	else if(n == 0){
+		return;
+	}
+	else{		
+		int pn = HandlePacket(m_buffer, n);
+		if(pn > 0){
+			LOG_DEBUG("udp fd:%d socket:%p unpack size:%d", m_fd, this, pn);
+		}
+		else{
+			//解包失败
+			LOG_ERROR("udp fd:%d socket:%p unpack failed",m_fd, this);
+			Close();
+		}
+		return;
+	}
+}
+
+bool UdpSocket::SendPacket(const char* data, size_t size){
+	SetLastAccessTime(time(NULL));
+
+    if(SocketState::listen != m_state && SocketState::connected != m_state){
+        LOG_ERROR("udp fd:%d socket:%p state:%s can't send", m_fd, this, toString(m_state).c_str());
+        return false;
+    }
+	if(nullptr == data || size < 1){
+		return true;
+	}
+
+	int n = sendto(m_fd, data, size, 0, (struct sockaddr*)&m_peerAddr, sizeof(struct sockaddr));
+    if (n == -1) {
+        LOG_ERROR("udp fd:%d socket:%p %s need resend", m_fd, this, strerror(errno));
+		return false;
+    }
+	else if(n == 0){
+        LOG_ERROR("udp fd:%d socket:%p send size:0 need resend", m_fd, this);
+        return false;
+    }
+	else{
+		return true;
+	}
+}
+
+int UdpSocket::HandlePacket(const char* data, size_t size){
+	return m_handler->HandlePacket(data, size, this);
+}

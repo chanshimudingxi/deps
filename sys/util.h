@@ -1,8 +1,9 @@
 #ifndef UTIL_H_
 #define UITL_H_
+
 #include <string>
 #include <stdint.h>
-#include<time.h>
+#include <time.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>

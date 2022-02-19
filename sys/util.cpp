@@ -27,3 +27,12 @@ uint64_t Util::GetMonoTimeUs(){
 	return  utime;
 }
 
+uint64_t Util::GetMonoTimeMs(){
+	struct timespec time;
+	clock_gettime(CLOCK_MONOTONIC, &time);
+	uint64_t utime = (uint64_t)time.tv_sec * 1000;
+	utime += time.tv_nsec/1000000;
+
+	return  utime;
+}
+

@@ -8,6 +8,7 @@ class Util{
 public:
 	static std::string DumpHex(const char* data, int size);
 	static uint64_t GetMonoTimeUs();
+	uint64_t Util::GetMonoTimeMs();
 };
 
 

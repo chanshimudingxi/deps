@@ -1,5 +1,4 @@
-#ifndef SOCKET_BASE_H_
-#define SOCKET_BASE_H_
+#pragma once
 
 #include <netinet/in.h>
 #include <time.h>
@@ -94,5 +93,3 @@ protected:
     SocketContainer *m_container;      	//容器
     ProtoParser* m_handler;           	//协议解析器
 };
-
-#endif

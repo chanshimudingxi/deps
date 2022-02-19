@@ -1,5 +1,4 @@
-#ifndef SERIALIZER_H_
-#define SERIALIZER_H_
+#pragma once
 
 #include <string>
 #include <stdint.h>
@@ -23,5 +22,3 @@ public:
     static bool GetDouble(const char* buffer, size_t size, double* value);
     static bool GetString(const char* buffer, size_t size, std::string* value);
 };
-
-#endif

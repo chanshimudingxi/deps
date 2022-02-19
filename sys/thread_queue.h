@@ -1,5 +1,4 @@
-#ifndef _THREAD_QUEUE_H_
-#define _THREAD_QUEUE_H_
+#pragma once
 
 #include <deque>
 #include <cassert>
@@ -186,6 +185,3 @@ template<typename T, typename D> bool ThreadQueue<T, D>::swap(queue_type &q, siz
 
     return true;
 }
-
-#endif
-

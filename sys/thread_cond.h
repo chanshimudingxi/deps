@@ -1,5 +1,4 @@
-#ifndef _THREAD_COND_H_
-#define _THREAD_COND_H_
+#pragma once
 
 #include "thread_mutex.h"
 #include <cassert>
@@ -31,5 +30,3 @@ public:
 private:
 	mutable pthread_cond_t m_cond;
 };
-
-#endif

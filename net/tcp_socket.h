@@ -1,5 +1,4 @@
-﻿#ifndef TCP_SOCKET_H_
-#define TCP_SOCKET_H_
+﻿#pragma once
 
 #include <time.h>
 #include <sys/types.h>
@@ -46,4 +45,3 @@ private:
     SocketBuffer* m_output;             //发送缓冲区
 	char m_buffer[READ_RECV_BUFF_SIZE];
 };
-#endif

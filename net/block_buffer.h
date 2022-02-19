@@ -1,5 +1,4 @@
-#ifndef BLOCK_BUFFER_H
-#define BLOCK_BUFFER_H
+#pragma once
 
 #include "socket_buffer.h"
 #include <cstddef>
@@ -24,5 +23,3 @@ private:
     size_t m_blockcount;
     size_t m_maxblockcount;
 };
-
-#endif

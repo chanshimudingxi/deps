@@ -1,5 +1,4 @@
-#ifndef PROTO_PARSER_H_
-#define PROTO_PARSER_H_
+#pragma once
 
 #include <cstddef>
 #include "socket_base.h"
@@ -12,5 +11,3 @@ class ProtoParser{
 public:
     virtual int	HandlePacket(const char* data, size_t size, SocketBase* s) = 0;
 };
-
-#endif

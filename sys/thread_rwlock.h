@@ -1,5 +1,4 @@
-#ifndef _THREAD_RWLOCK_H_
-#define _THREAD_RWLOCK_H_
+#pragma once
 
 #include <cassert>
 #include <pthread.h>
@@ -26,5 +25,3 @@ public:
 private:
 	mutable pthread_rwlock_t m_rwlock;
 };
-
-#endif

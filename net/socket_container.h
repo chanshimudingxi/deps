@@ -1,5 +1,4 @@
-﻿#ifndef SOCKET_CONTAINER_H_
-#define SOCKET_CONTAINER_H_
+﻿#pragma once
 
 #include "socket_base.h"
 
@@ -20,5 +19,3 @@ public:
 	virtual void HandleSockets() = 0;
 	virtual int  SocketNum() = 0;
 };
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef EPOLL_CONTAINER_H_
-#define EPOLL_CONTAINER_H_
+#pragma once
 
 #include <string>
 #include <set>
@@ -49,5 +48,3 @@ private:
 	std::set<SocketBase*> m_closeSockets;
 	int m_socketNum;
 };
-
-#endif

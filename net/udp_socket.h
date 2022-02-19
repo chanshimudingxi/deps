@@ -1,5 +1,4 @@
-#ifndef UDP_SOCKET_H_
-#define UDP_SOCKET_H_
+#pragma once
 
 #include <time.h>
 #include <sys/types.h>
@@ -42,5 +41,3 @@ private:
 	void SetSendBufferSize(uint32_t size);
 	char m_buffer[READ_RECV_BUFF_SIZE];
 };
-
-#endif

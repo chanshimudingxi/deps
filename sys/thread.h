@@ -1,5 +1,4 @@
-#ifndef _THREAD_H_
-#define _THREAD_H_
+#pragma once
 
 #include <cstdint>
 #include <time.h>
@@ -31,4 +30,3 @@ protected:
 	pthread_t m_tid;
 	ThreadMutex m_lock;//防止start函数被同时调用两次产生的问题
 };
-#endif

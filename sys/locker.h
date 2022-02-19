@@ -1,6 +1,4 @@
-#ifndef _LOCKER_H_
-#define _LOCKER_H_
-
+#pragma once
 
 //锁模板类，构造时加锁，析构时解锁。需配合ThreadMutex使用。
 template<typename T>
@@ -63,4 +61,3 @@ private:
     mutable bool m_locked;
 
 };
-#endif

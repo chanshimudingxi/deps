@@ -1,5 +1,5 @@
-#ifndef SOCKET_BUFFER_H_
-#define SOCKET_BUFFER_H_
+#pragma once
+
 #include <cstddef>
 
 class SocketBuffer{
@@ -13,5 +13,3 @@ public:
     virtual size_t size() = 0;
     virtual size_t capacity() = 0;
 };
-
-#endif

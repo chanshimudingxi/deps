@@ -1,5 +1,4 @@
-#ifndef _THREAD_MUTEX_H_
-#define _THREAD_MUTEX_H_
+#pragma once
 
 #include <pthread.h>
 #include <cassert>
@@ -29,4 +28,3 @@ friend class ThreadCond;
 protected:
     mutable pthread_mutex_t m_mutex;
 };
-#endif

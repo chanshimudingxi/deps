@@ -1,5 +1,4 @@
-#ifndef UTIL_H_
-#define UITL_H_
+#pragma once
 
 #include <string>
 #include <stdint.h>
@@ -15,6 +14,3 @@ public:
 	static uint64_t GetMonoTimeMs();
 	static std::string UintIP2String(uint32_t ip);
 };
-
-
-#endif

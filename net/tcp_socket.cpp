@@ -167,7 +167,7 @@ bool TcpSocket::Listen(int port, int backlog, SocketContainer *pContainer, Proto
 bool TcpSocket::Connect(uint32_t ip, int port, SocketContainer *pContainer, ProtoParser* handler, int* connectedfd){
     int fd = socket(AF_INET,SOCK_STREAM,0);
     if(fd == -1){
-        LOG_ERROR("tcp %s %s:%u",strerror(errno), Util::UintIP2String().c_str(), port);
+        LOG_ERROR("tcp %s %s:%u",strerror(errno), Util::UintIP2String(ip).c_str(), port);
         return false; 
     }
 

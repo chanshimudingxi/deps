@@ -31,12 +31,12 @@ void UdpSocket::SetRecvBufferSize(uint32_t size)
 	getsockopt(m_fd, SOL_SOCKET, SO_RCVBUF,(void *)&oldSize, &optSize); 
 
 	if( -1 == setsockopt(m_fd, SOL_SOCKET, SO_RCVBUFFORCE, (void *)&setSize, sizeof(setSize)) ){
-		LOG_ERROR("upd fd:%d recv buffer old size:%u set size:%u failed", m_fd, oldSize, size);
+		LOG_ERROR("udp fd:%d recv buffer old size:%u set size:%u failed", m_fd, oldSize, size);
 	}
 
 	getsockopt(m_fd, SOL_SOCKET, SO_RCVBUF, (void *)&setSize, &optSize); 
 
-	LOG_INFO("upd fd:%d recv buffer old size:%u set size:%u new size:%u", m_fd, oldSize, size, setSize);
+	LOG_INFO("udp fd:%d recv buffer old size:%u set size:%u new size:%u", m_fd, oldSize, size, setSize);
 }
 
 void UdpSocket::SetSendBufferSize(uint32_t size)
@@ -48,7 +48,7 @@ void UdpSocket::SetSendBufferSize(uint32_t size)
 	getsockopt(m_fd, SOL_SOCKET, SO_SNDBUF,(void *)&oldSize, &optSize); 
 
 	if( -1 == setsockopt(m_fd, SOL_SOCKET, SO_SNDBUFFORCE, (void *)&setSize, sizeof(setSize)) ){
-		LOG_ERROR("upd fd:%d send buffer old size:%u set size:%u failed", m_fd, oldSize, size);
+		LOG_ERROR("udp fd:%d send buffer old size:%u set size:%u failed", m_fd, oldSize, size);
 	}
 
 	getsockopt(m_fd, SOL_SOCKET, SO_SNDBUF, (void *)&setSize, &optSize); 

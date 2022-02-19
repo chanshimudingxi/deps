@@ -12,7 +12,7 @@ public:
 	static std::string DumpHex(const char* data, int size);
 	static uint64_t GetMonoTimeUs();
 	static uint64_t GetMonoTimeMs();
-	std::string UintIP2String(uint32_t ip);
+	static std::string UintIP2String(uint32_t ip);
 };
 
 

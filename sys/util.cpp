@@ -36,3 +36,8 @@ uint64_t Util::GetMonoTimeMs(){
 	return  utime;
 }
 
+std::string Util::UintIP2String(uint32_t ip){
+	struct in_addr saddr;
+	saddr.s_addr = ip;
+	return std::string(inet_ntoa(saddr));
+}

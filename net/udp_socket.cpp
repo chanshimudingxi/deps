@@ -131,13 +131,13 @@ bool UdpSocket::Listen(int port, int backlog, SocketContainer *pContainer, Proto
 bool UdpSocket::Connect(uint32_t ip, int port, SocketContainer *pContainer, ProtoParser* handler, int* connectedfd){
     int fd = socket(AF_INET,SOCK_DGRAM,0);
     if(fd == -1){
-        LOG_ERROR("udp %s",strerror(errno));
+        LOG_ERROR("udp %s %s:%u",strerror(errno), Util::UintIP2String(ip).c_str(), port);
         return false; 
     }
 
     int flags = fcntl(fd, F_GETFL, 0);
     if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
-        LOG_ERROR("udp fd:%d %s",fd,strerror(errno));
+        LOG_ERROR("udp fd:%d %s %s:%u",fd,strerror(errno), Util::UintIP2String(ip).c_str(), port);
         return false;
     }
 
@@ -152,14 +152,14 @@ bool UdpSocket::Connect(uint32_t ip, int port, SocketContainer *pContainer, Prot
     s->SetCreateTime(time(NULL));
     s->SetLastAccessTime(s->GetCreateTime());
     s->SetPeerAddr(peerAddr);
-	LOG_DEBUG("udp fd:%d socket:%p new socket", fd, s);
+	LOG_DEBUG("udp fd:%d socket:%p new socket %s:%u", fd, s, Util::UintIP2String(ip).c_str(), port);
     s->SetState(SocketState::connected);
     if(pContainer->AddSocket(s, SOCKET_EVENT_READ|SOCKET_EVENT_ERROR)){
         *connectedfd = s->GetFd();
         return true;
     }
 
-    LOG_ERROR("udp fd:%d socket:%p %s",fd, s, strerror(errno));
+    LOG_ERROR("udp fd:%d socket:%p %s %s:%u",fd, s, strerror(errno), Util::UintIP2String(ip).c_str(), port);
     s->Close();
     *connectedfd = -1;
     return false;

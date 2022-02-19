@@ -16,6 +16,7 @@
 #include "socket_base.h"
 #include "block_buffer.h"
 #include "sys/log.h"
+#include "sys/util.h"
 
 class TcpSocket: public SocketBase{
 public:

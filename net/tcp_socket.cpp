@@ -167,13 +167,13 @@ bool TcpSocket::Listen(int port, int backlog, SocketContainer *pContainer, Proto
 bool TcpSocket::Connect(uint32_t ip, int port, SocketContainer *pContainer, ProtoParser* handler, int* connectedfd){
     int fd = socket(AF_INET,SOCK_STREAM,0);
     if(fd == -1){
-        LOG_ERROR("tcp %s",strerror(errno));
+        LOG_ERROR("tcp %s %s:%u",strerror(errno), Util::UintIP2String().c_str(), port);
         return false; 
     }
 
     int flags = fcntl(fd, F_GETFL, 0);
     if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
-        LOG_ERROR("tcp fd:%d %s",fd,strerror(errno));
+        LOG_ERROR("tcp fd:%d %s %s:%u",fd,strerror(errno), Util::UintIP2String(ip).c_str(), port);
         return false;
     }
 
@@ -183,30 +183,30 @@ bool TcpSocket::Connect(uint32_t ip, int port, SocketContainer *pContainer, Prot
     peerAddr.sin_port=htons(port);
     peerAddr.sin_addr.s_addr=ip;
     int ret = connect(fd,(struct sockaddr *)(&peerAddr),sizeof(struct sockaddr));
-    LOG_DEBUG("tcp fd:%d start connecting",fd);
+    LOG_DEBUG("tcp fd:%d start connecting %s:%u",fd, Util::UintIP2String(ip).c_str(), port);
     TcpSocket *s = new TcpSocket(pContainer, handler);
     s->SetFd(fd);
     s->SetCreateTime(time(NULL));
     s->SetLastAccessTime(s->GetCreateTime());
     s->SetPeerAddr(peerAddr);
-	LOG_DEBUG("tcp fd:%d socket:%p new socket", s->GetFd(), s);
+	LOG_DEBUG("tcp fd:%d socket:%p new socket %s:%u", s->GetFd(), s, Util::UintIP2String(ip).c_str(), port);
 	//只需要关注可读事件
     if(ret == 0 && pContainer->AddSocket(s, SOCKET_EVENT_READ|SOCKET_EVENT_ERROR)){
         s->SetState(SocketState::connected);
-        LOG_DEBUG("tcp fd:%d socket:%p connected",s->GetFd(), s);
+        LOG_DEBUG("tcp fd:%d socket:%p connected %s:%u",s->GetFd(), s, Util::UintIP2String(ip).c_str(), port);
         *connectedfd = s->GetFd();
         return true;
     }
-	//需要而外关注可写事件，这表明连接已经connected
+	//需要额外关注可写事件，这表明连接已经connected
     if(ret == -1 && errno == EINPROGRESS && pContainer->AddSocket(s, SOCKET_EVENT_READ|SOCKET_EVENT_WRITE|SOCKET_EVENT_ERROR)){
         s->SetState(SocketState::connecting);
 		s->SetTimeout(TCP_CONNECT_TIMEOUT);
-        LOG_INFO("tcp fd:%d socket:%p connect in async mode", s->GetFd(),s);
+        LOG_INFO("tcp fd:%d socket:%p connect %s:%u in async mode", s->GetFd(),s, Util::UintIP2String(ip).c_str(), port);
         *connectedfd = s->GetFd();
         return true;
     }
 
-    LOG_ERROR("tcp fd:%d socket:%p %s",fd, s, strerror(errno));
+    LOG_ERROR("tcp fd:%d socket:%p %s %s:%u",fd, s, strerror(errno), Util::UintIP2String(ip).c_str(), port);
     s->Close();
     *connectedfd = -1;
     return false;

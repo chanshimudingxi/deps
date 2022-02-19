@@ -15,6 +15,7 @@
 
 #include "socket_base.h"
 #include "sys/log.h"
+#include "sys/util.h"
 
 class UdpSocket : public SocketBase{
 public:

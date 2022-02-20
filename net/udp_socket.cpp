@@ -53,7 +53,7 @@ void UdpSocket::SetSendBufferSize(uint32_t size)
 
 	getsockopt(m_fd, SOL_SOCKET, SO_SNDBUF, (void *)&setSize, &optSize); 
 
-	LOG_INFO("upd fd:%d send buffer old size:%u set size:%u new size:%u", m_fd, oldSize, size, setSize);
+	LOG_INFO("udp fd:%d send buffer old size:%u set size:%u new size:%u", m_fd, oldSize, size, setSize);
 }
 
 void UdpSocket::HandleRead(){

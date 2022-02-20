@@ -166,6 +166,7 @@ bool UdpSocket::Connect(uint32_t ip, int port, SocketContainer *pContainer, Prot
 }
 
 void UdpSocket::Close(){
+	m_handler->HandleClose(this);
     //连接容器中删除描述符
     m_container->DelSocket(this);
 

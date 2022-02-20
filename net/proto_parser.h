@@ -10,4 +10,5 @@ class SocketBase;
 class ProtoParser{
 public:
     virtual int	HandlePacket(const char* data, size_t size, SocketBase* s) = 0;
+	virtual void HandleClose(SocketBase* s) = 0;
 };

@@ -343,6 +343,7 @@ void TcpSocket::Write() {
 }
 
 void TcpSocket::Close(){
+	m_handler->HandleClose(this);
     //连接容器中删除描述符
     m_container->DelSocket(this);
 

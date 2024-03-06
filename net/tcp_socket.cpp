@@ -35,11 +35,24 @@ bool TcpSocket::EnableTcpKeepAlive(int aliveTime, int interval, int count){
         return false;
     }
 
+#ifdef __APPLE__
+    if (-1 == setsockopt(m_fd, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(int))) {
+        LOG_ERROR("tcp fd:%d socket:%p %s", m_fd, this, strerror(errno));
+        return false;
+    }
+    if (-1 == setsockopt(m_fd, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(int))) {
+        LOG_ERROR("tcp fd:%d socket:%p %s", m_fd, this, strerror(errno));
+        return false;
+    }
+    if (-1 == setsockopt(m_fd, IPPROTO_TCP, TCP_KEEPALIVE, &aliveTime, sizeof(int))) {
+        LOG_ERROR("tcp fd:%d socket:%p %s", m_fd, this, strerror(errno));
+        return false;
+    }
+#else
     if(-1 == setsockopt(m_fd, SOL_TCP, TCP_KEEPIDLE, (void*)&aliveTime, sizeof(aliveTime))){
         LOG_ERROR("tcp fd:%d socket:%p %s", m_fd, this, strerror(errno));
         return false;
     }
-    
     if(-1 == setsockopt(m_fd, SOL_TCP, TCP_KEEPINTVL, (void*)&interval, sizeof(interval))){
         LOG_ERROR("tcp fd:%d socket:%p %s", m_fd, this, strerror(errno));
         return false;
@@ -49,6 +62,8 @@ bool TcpSocket::EnableTcpKeepAlive(int aliveTime, int interval, int count){
         LOG_ERROR("tcp fd:%d socket:%p %s", m_fd, this, strerror(errno));
         return false;
     }
+#endif
+    
 
     return true;
 }

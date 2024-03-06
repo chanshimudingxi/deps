@@ -10,9 +10,15 @@
 #include "locker.h"
 #include "thread_mutex.h"
 
+
 class Thread{
 public:
-	Thread():m_running(false), m_tid(-1){}
+	Thread():m_running(false){
+		#ifdef __APPLE__
+		#else
+			m_tid = -1;
+		#endif
+	}
 	virtual ~Thread(){}
 	pthread_t start();
 	bool isAlive() const;

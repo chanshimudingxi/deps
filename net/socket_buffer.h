@@ -5,7 +5,7 @@
 class SocketBuffer{
 public:
     SocketBuffer(){}
-    ~SocketBuffer(){}
+    virtual ~SocketBuffer(){}
     
     virtual void append(const char* data, size_t size) = 0;
     virtual void erase(size_t size) = 0;

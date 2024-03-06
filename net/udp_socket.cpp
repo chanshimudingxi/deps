@@ -29,8 +29,13 @@ void UdpSocket::SetRecvBufferSize(uint32_t size)
 	uint32_t optSize  = sizeof(uint32_t);
 
 	getsockopt(m_fd, SOL_SOCKET, SO_RCVBUF,(void *)&oldSize, &optSize); 
-
-	if( -1 == setsockopt(m_fd, SOL_SOCKET, SO_RCVBUFFORCE, (void *)&setSize, sizeof(setSize)) ){
+    int ret = 0;
+#ifdef __APPLE__
+    ret = setsockopt(m_fd, SOL_SOCKET, SO_RCVBUF, (void *)&setSize, sizeof(setSize));
+#else
+    ret = setsockopt(m_fd, SOL_SOCKET, SO_RCVBUFFORCE, (void *)&setSize, sizeof(setSize));
+#endif
+	if( -1 == ret ){
 		LOG_ERROR("udp fd:%d recv buffer old size:%u set size:%u failed", m_fd, oldSize, size);
 	}
 
@@ -45,9 +50,14 @@ void UdpSocket::SetSendBufferSize(uint32_t size)
 	uint32_t oldSize = 0;
 	uint32_t optSize  = sizeof(uint32_t);
 
-	getsockopt(m_fd, SOL_SOCKET, SO_SNDBUF,(void *)&oldSize, &optSize); 
-
-	if( -1 == setsockopt(m_fd, SOL_SOCKET, SO_SNDBUFFORCE, (void *)&setSize, sizeof(setSize)) ){
+	getsockopt(m_fd, SOL_SOCKET, SO_SNDBUF,(void *)&oldSize, &optSize);
+    int ret = 0;
+#ifdef __APPLE__
+    ret = setsockopt(m_fd, SOL_SOCKET, SO_SNDBUF, (void *)&setSize, sizeof(setSize));
+#else
+    ret = setsockopt(m_fd, SOL_SOCKET, SO_SNDBUFFORCE, (void *)&setSize, sizeof(setSize));
+#endif
+	if( -1 == ret ){
 		LOG_ERROR("udp fd:%d send buffer old size:%u set size:%u failed", m_fd, oldSize, size);
 	}
 

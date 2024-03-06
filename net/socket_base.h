@@ -61,7 +61,7 @@ class ProtoParser;
 class SocketBase {
 public:
     SocketBase(){}
-    ~SocketBase(){}    
+    virtual ~SocketBase(){}    
 	virtual void HandleRead() = 0;
 	virtual void HandleWrite() = 0;
     virtual void HandleError() = 0;

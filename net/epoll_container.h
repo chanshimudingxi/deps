@@ -2,7 +2,6 @@
 
 #include <string>
 #include <set>
-#include <sys/epoll.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -14,6 +13,12 @@
 #include <cstring>
 #include <time.h>
 #include <cassert> 
+
+#ifdef __APPLE__
+    #include <sys/event.h>
+#else
+    #include <sys/epoll.h>
+#endif
 
 #include "sys/log.h"
 #include "socket_base.h"
@@ -43,7 +48,11 @@ private:
     */
     SocketBase** m_socketArray;
     int m_epfd;    //管理描述符对应事件的容器
+#ifdef __APPLE__
+    struct kevent *m_events;
+#else  
     struct epoll_event *m_events;
+#endif
     int m_maxFdEventWaitTime; //等待事件发生的最长时间(单位是毫秒)
 	std::set<SocketBase*> m_closeSockets;
 	int m_socketNum;

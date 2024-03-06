@@ -17,3 +17,4 @@ extern void log(int priority, const char *fmt, ...);
 #define LOG_INFO(fmt, args...)  log(LOG_LEVEL_INFO,  "[INFO]%u:%s:%u(%s): "  fmt "\n",   uint32_t(time(NULL)), __FILE__, __LINE__, __FUNCTION__, ##args)
 #define LOG_WARN(fmt, args...)  log(LOG_LEVEL_WARN,  "[WARN]%u:%s:%u(%s): "  fmt "\n",   uint32_t(time(NULL)), __FILE__, __LINE__, __FUNCTION__, ##args)
 #define LOG_ERROR(fmt, args...) log(LOG_LEVEL_ERROR, "[ERROR]%u:%s:%u(%s): " fmt "\n",   uint32_t(time(NULL)), __FILE__, __LINE__, __FUNCTION__, ##args)
+#define FUNLOG(level, fmt, ...)   log(level, "[%s]: " fmt, __func__, ##__VA_ARGS__)

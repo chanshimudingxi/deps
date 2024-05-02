@@ -20,17 +20,6 @@ enum class SocketType{
 	udp
 };
 
-static std::string toString(SocketType type){
-    switch(type){
-        case SocketType::tcp:
-            return "tcp";
-        case SocketType::udp:
-            return "udp";
-        default:
-            return "unknow";
-    }
-}
-
 enum class SocketState {
     connecting,
     connected,
@@ -39,26 +28,38 @@ enum class SocketState {
 	close
 };
 
-static std::string toString(SocketState state){
-    switch(state){
-        case SocketState::connecting:
-            return "connecting";
-        case SocketState::connected:
-            return "connected";
-        case SocketState::listen:
-            return "listen";
-        case SocketState::accept:
-            return "accept";
-        case SocketState::close:
-            return "close";
-        default:
-            return "unknow";
-    }
-}
 
 class PacketHandler;
 
 class SocketBase {
+public:
+    static std::string toString(SocketType type){
+        switch(type){
+            case SocketType::tcp:
+                return "tcp";
+            case SocketType::udp:
+                return "udp";
+            default:
+                return "unknow";
+        }
+    }
+
+    static std::string toString(SocketState state){
+        switch(state){
+            case SocketState::connecting:
+                return "connecting";
+            case SocketState::connected:
+                return "connected";
+            case SocketState::listen:
+                return "listen";
+            case SocketState::accept:
+                return "accept";
+            case SocketState::close:
+                return "close";
+            default:
+                return "unknow";
+        }
+    }
 public:
     SocketBase(){}
     virtual ~SocketBase(){}    

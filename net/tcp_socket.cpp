@@ -1,6 +1,6 @@
 #include "tcp_socket.h"
 
-TcpSocket::TcpSocket(SocketContainer *pContainer, ProtoParser* handler){
+TcpSocket::TcpSocket(SocketContainer *pContainer, PacketHandler* handler){
     m_container = pContainer;
     m_handler = handler;
     m_fd = -1;
@@ -9,8 +9,8 @@ TcpSocket::TcpSocket(SocketContainer *pContainer, ProtoParser* handler){
     m_createTime = 0;
     m_lastAccessTime = 0;
     m_timeout = 0;
-    m_input = new BlockBuffer;
-    m_output = new BlockBuffer;
+    m_input = new BlockBuffer<def_block_alloc_4k, 1024>;
+    m_output = new BlockBuffer<def_block_alloc_4k, 1024>;
 }
 
 TcpSocket::~TcpSocket(){
@@ -77,12 +77,12 @@ bool TcpSocket::EnableTcpNoDelay(){
     return true;
 }
 
-void TcpSocket::HandleRead(){
+void TcpSocket::HandleRead(char* max_read_buffer, size_t max_read_size){
     if (m_state == SocketState::listen) {
         Accept();
     }
     else if (m_state == SocketState::accept || m_state == SocketState::connecting|| m_state == SocketState::connected) {
-        Read();
+        Read(max_read_buffer, max_read_size);
     }
     else{
         LOG_INFO("tcp fd:%d socket:%p state:%s can't read", m_fd, this, toString(m_state).c_str());
@@ -128,7 +128,7 @@ void TcpSocket::HandleTimeout()
     }
 }
 
-bool TcpSocket::Listen(int port, int backlog, SocketContainer *pContainer, ProtoParser* handler) {
+bool TcpSocket::Listen(int port, int backlog, SocketContainer *pContainer, PacketHandler* handler) {
 	int fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd == -1) {
         LOG_ERROR("tcp %s", strerror(errno));
@@ -168,7 +168,7 @@ bool TcpSocket::Listen(int port, int backlog, SocketContainer *pContainer, Proto
     s->SetLastAccessTime(s->GetCreateTime());
     s->SetState(SocketState::listen);
 	LOG_DEBUG("tcp fd:%d socket:%p new socket", s->GetFd(), s);
-	//只需要关注可读事件
+	//listenfd只需要关注可读事件
     if(!pContainer->AddSocket(s, SOCKET_EVENT_READ|SOCKET_EVENT_ERROR)){
         LOG_ERROR("tcp fd:%d socket:%p add events failed", fd, s);
         s->Close();
@@ -179,7 +179,7 @@ bool TcpSocket::Listen(int port, int backlog, SocketContainer *pContainer, Proto
     return true;
 }
 
-bool TcpSocket::Connect(uint32_t ip, int port, SocketContainer *pContainer, ProtoParser* handler, int* connectedfd){
+bool TcpSocket::Connect(uint32_t ip, int port, SocketContainer *pContainer, PacketHandler* handler, int* connectedfd){
     int fd = socket(AF_INET,SOCK_STREAM,0);
     if(fd == -1){
         LOG_ERROR("tcp %s %s:%u",strerror(errno), Util::UintIP2String(ip).c_str(), port);
@@ -205,14 +205,14 @@ bool TcpSocket::Connect(uint32_t ip, int port, SocketContainer *pContainer, Prot
     s->SetLastAccessTime(s->GetCreateTime());
     s->SetPeerAddr(peerAddr);
 	LOG_DEBUG("tcp fd:%d socket:%p new socket %s:%u", s->GetFd(), s, Util::UintIP2String(ip).c_str(), port);
-	//只需要关注可读事件
+	//connected fd只需要关注可读事件
     if(ret == 0 && pContainer->AddSocket(s, SOCKET_EVENT_READ|SOCKET_EVENT_ERROR)){
         s->SetState(SocketState::connected);
         LOG_DEBUG("tcp fd:%d socket:%p connected %s:%u",s->GetFd(), s, Util::UintIP2String(ip).c_str(), port);
         *connectedfd = s->GetFd();
         return true;
     }
-	//需要额外关注可写事件，这表明连接已经connected
+	//需要额外关注可写事件，可写这表明连接已经connected
     if(ret == -1 && errno == EINPROGRESS && pContainer->AddSocket(s, SOCKET_EVENT_READ|SOCKET_EVENT_WRITE|SOCKET_EVENT_ERROR)){
         s->SetState(SocketState::connecting);
 		s->SetTimeout(TCP_CONNECT_TIMEOUT);
@@ -270,9 +270,9 @@ void TcpSocket::Accept() {
     LOG_INFO("tcp lfd:%d fd:%d socket:%p accept", m_fd, afd, s);
 }
 
-void TcpSocket::Read() {
+void TcpSocket::Read(char* max_read_buffer, size_t max_read_size) {
     SetLastAccessTime(time(NULL));
-    int n = recv(m_fd, m_buffer, READ_RECV_BUFF_SIZE, 0);
+    int n = recv(m_fd, max_read_buffer, max_read_size, 0);
     if (n == -1) {
         if(errno != EAGAIN){
 			return;
@@ -290,12 +290,12 @@ void TcpSocket::Read() {
         return;
     }
 	else{
-		m_input->append(m_buffer, n);
+		m_input->append(max_read_buffer, n);
 		
 		int pn = HandlePacket(m_input->data(), m_input->size());
 
 		if(pn > 0){
-			m_input->erase(pn);
+			m_input->erase(0,pn);
 			LOG_DEBUG("tcp fd:%d socket:%p unpack size:%d", m_fd, this, pn);
 		}
 		else if(pn == 0){
@@ -316,50 +316,39 @@ void TcpSocket::Write() {
         return;
     }
 
-    int n = send(m_fd,m_output->data(),m_output->size(),0);
-    if (n == -1) {
-        //没发完的需要等下次可以发的时候继续发
-        if(errno == EAGAIN && 
-            m_container->ModSocket(this, SOCKET_EVENT_READ|SOCKET_EVENT_WRITE|SOCKET_EVENT_ERROR)){
-            LOG_DEBUG("tcp fd:%d socket:%p resend", m_fd, this);
-            return;
+    while(true){
+        int n = send(m_fd,m_output->data(),m_output->size(),0);
+        if (n == -1) {
+            //没发完的需要等下次可以发的时候继续发
+            if(errno == EAGAIN && 
+                m_container->ModSocket(this, SOCKET_EVENT_READ|SOCKET_EVENT_WRITE|SOCKET_EVENT_ERROR)){
+                LOG_DEBUG("tcp fd:%d socket:%p resend", m_fd, this);
+                return;
+            }
+            else{
+                LOG_ERROR("tcp fd:%d socket:%p %s", m_fd, this, strerror(errno));
+                Close();
+                return;
+            }
         }
         else{
-            LOG_ERROR("tcp fd:%d socket:%p %s", m_fd, this, strerror(errno));
-            Close();
-            return;
+            m_output->erase(0, n);
+            if(m_output->size() <= 0){
+                //全部都发完了就不需要再关注可写事件
+                if(!m_container->ModSocket(this, SOCKET_EVENT_READ|SOCKET_EVENT_ERROR)){
+                    LOG_ERROR("tcp fd:%d socket:%p %s", m_fd, this, strerror(errno));
+                    Close();
+                    return;
+                }
+            }
         }
     }
-	else if(n == 0){
-        LOG_ERROR("tcp fd:%d socket:%p send size 0", m_fd, this);
-        Close();
-        return;
-    }
-	else{
-		m_output->erase(n);
-
-		if(m_output->size() > 0){
-			//没发完的需要等下次可以发的时候继续发
-			if(!m_container->ModSocket(this, SOCKET_EVENT_READ|SOCKET_EVENT_WRITE|SOCKET_EVENT_ERROR)){
-				LOG_ERROR("tcp fd:%d socket:%p %s", m_fd, this, strerror(errno));
-				Close();
-				return;
-			}
-		}
-		else{
-			//全部都发完了就不需要再关注可写事件
-			if(!m_container->ModSocket(this, SOCKET_EVENT_READ|SOCKET_EVENT_ERROR)){
-				LOG_ERROR("tcp fd:%d socket:%p %s", m_fd, this, strerror(errno));
-				Close();
-				return;
-			}
-		}
-	}
 }
 
 void TcpSocket::Close(){
 	m_handler->HandleClose(this);
-    //连接容器中删除描述符
+
+    //删除容器存储的数据
     m_container->DelSocket(this);
 
     if(m_fd != -1){

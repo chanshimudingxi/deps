@@ -5,7 +5,7 @@
 #include <string>
 
 #include "socket_container.h"
-#include "proto_parser.h"
+#include "packet_handler.h"
 
 class SocketContainer;
 
@@ -13,7 +13,7 @@ class SocketContainer;
 #define	TCP_ACCESS_TIMEOUT	60				//TCP不活跃超时
 #define UDP_RECV_BUFF_SIZE  16*1024*1024  	//16M
 #define UDP_SEND_BUFF_SIZE 	16*1024*1024	//16M
-#define READ_RECV_BUFF_SIZE	65535			//一个udp包最大大小
+#define MAX_READ_BUFF_SIZE  65536           //一次read最大读取数据，udp包一次没读完数据就被丢了
 
 enum class SocketType{
 	tcp,
@@ -56,13 +56,13 @@ static std::string toString(SocketState state){
     }
 }
 
-class ProtoParser;
+class PacketHandler;
 
 class SocketBase {
 public:
     SocketBase(){}
     virtual ~SocketBase(){}    
-	virtual void HandleRead() = 0;
+	virtual void HandleRead(char* max_read_buffer, size_t max_read_size) = 0;
 	virtual void HandleWrite() = 0;
     virtual void HandleError() = 0;
     virtual void HandleTimeout() = 0;
@@ -91,5 +91,5 @@ protected:
     struct sockaddr_in m_peerAddr;	    //终端端地址
     int m_timeout;                      //连接超时时间（单位是秒，0表示永不超时）
     SocketContainer *m_container;      	//容器
-    ProtoParser* m_handler;           	//协议解析器
+    PacketHandler* m_handler;           //协议解析
 };

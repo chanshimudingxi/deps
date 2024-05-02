@@ -1,6 +1,4 @@
 #include "util.h"
-#include <sstream>
-#include <iomanip>
 
 std::string Util::DumpHex(const char* data,int size){
     if(nullptr == data || size < 1){
@@ -40,4 +38,24 @@ std::string Util::UintIP2String(uint32_t ip){
 	struct in_addr saddr;
 	saddr.s_addr = ip;
 	return std::string(inet_ntoa(saddr));
+}
+
+
+std::string Util::getCWD()
+{
+	char *cwd = nullptr;
+#ifdef __APPLE__  
+	char buffer[1024];
+	cwd = getcwd(buffer, sizeof(buffer));
+#else
+	cwd = get_current_dir_name();
+#endif
+	std::string ret = ".";
+	if (nullptr != cwd)
+	{
+		ret.assign(cwd);
+		free(cwd);
+	}
+
+	return ret;
 }

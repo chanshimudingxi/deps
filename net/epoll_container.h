@@ -20,7 +20,7 @@
     #include <sys/epoll.h>
 #endif
 
-#include "sys/log.h"
+#include "../sys/logger.h"
 #include "socket_base.h"
 #include "socket_container.h"
 
@@ -56,4 +56,6 @@ private:
     int m_maxFdEventWaitTime; //等待事件发生的最长时间(单位是毫秒)
 	std::set<SocketBase*> m_closeSockets;
 	int m_socketNum;
+
+    char m_maxReadBuffer[MAX_READ_BUFF_SIZE];
 };

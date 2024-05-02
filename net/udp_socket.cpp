@@ -1,6 +1,6 @@
 #include "udp_socket.h"
 
-UdpSocket::UdpSocket(SocketContainer *pContainer, ProtoParser* handler){
+UdpSocket::UdpSocket(SocketContainer *pContainer, PacketHandler* handler){
     m_container = pContainer;
     m_handler = handler;
     m_fd = -1;
@@ -9,6 +9,7 @@ UdpSocket::UdpSocket(SocketContainer *pContainer, ProtoParser* handler){
     m_createTime = 0;
     m_lastAccessTime = 0;
     m_timeout = 0;
+    m_input = new BlockBuffer<def_block_alloc_4k, 1024>;
 }
 
 UdpSocket::~UdpSocket(){
@@ -20,6 +21,8 @@ UdpSocket::~UdpSocket(){
     m_createTime = 0;
     m_lastAccessTime = 0;
     m_timeout = 0;
+    delete m_input;
+    m_input = nullptr;
 }
 
 void UdpSocket::SetRecvBufferSize(uint32_t size)
@@ -66,9 +69,9 @@ void UdpSocket::SetSendBufferSize(uint32_t size)
 	LOG_INFO("udp fd:%d send buffer old size:%u set size:%u new size:%u", m_fd, oldSize, size, setSize);
 }
 
-void UdpSocket::HandleRead(){
+void UdpSocket::HandleRead(char* max_read_buffer, size_t max_read_size){
 	LOG_DEBUG("udp fd:%d socket:%p state:%s read", m_fd, this, toString(m_state).c_str());
-	Read();
+	Read(max_read_buffer, max_read_size);
 }
 
 void UdpSocket::HandleWrite(){
@@ -91,7 +94,7 @@ void UdpSocket::HandleTimeout(){
     }
 }
 
-bool UdpSocket::Listen(int port, int backlog, SocketContainer *pContainer, ProtoParser* handler){
+bool UdpSocket::Listen(int port, int backlog, SocketContainer *pContainer, PacketHandler* handler){
 	int fd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (fd == -1) {
         LOG_ERROR("udp %s", strerror(errno));
@@ -138,7 +141,7 @@ bool UdpSocket::Listen(int port, int backlog, SocketContainer *pContainer, Proto
     return true;
 }
 
-bool UdpSocket::Connect(uint32_t ip, int port, SocketContainer *pContainer, ProtoParser* handler, int* connectedfd){
+bool UdpSocket::Connect(uint32_t ip, int port, SocketContainer *pContainer, PacketHandler* handler, int* connectedfd){
     int fd = socket(AF_INET,SOCK_DGRAM,0);
     if(fd == -1){
         LOG_ERROR("udp %s %s:%u",strerror(errno), Util::UintIP2String(ip).c_str(), port);
@@ -191,29 +194,40 @@ void UdpSocket::Close(){
     m_lastAccessTime = 0;
 }
 
-void UdpSocket::Read(){
+void UdpSocket::Read(char* max_read_buffer, size_t max_read_size){
     SetLastAccessTime(time(NULL));
 	sockaddr_in sock;
 	socklen_t sock_size = sizeof(sock);
     
-	int n = recvfrom(m_fd, m_buffer, READ_RECV_BUFF_SIZE, 0, (sockaddr*)(&sock), &sock_size);
+	int n = recvfrom(m_fd, max_read_buffer, max_read_size, 0, (sockaddr*)(&sock), &sock_size);
+
     if (n == -1) {
-        if(errno == EAGAIN){
+        if(errno != EAGAIN){
 			return;
-		}
+        }
 		else{
 			LOG_ERROR("udp fd:%d socket:%p %s",m_fd, this, strerror(errno));
             Close();
             return;
 		}
     }
-	else if(n == 0){
-		return;
-	}
-	else{		
-		int pn = HandlePacket(m_buffer, n);
+	else if (n == 0) {
+        LOG_INFO("udp fd:%d socket:%p peer close %s:%u", m_fd, this, 
+			inet_ntoa(sock.sin_addr), ntohs(sock.sin_port));
+        Close();
+        return;
+    }
+	else{
+		m_input->append(max_read_buffer, n);
+		
+		int pn = HandlePacket(m_input->data(), m_input->size());
+
 		if(pn > 0){
+			m_input->erase(0,pn);
 			LOG_DEBUG("udp fd:%d socket:%p unpack size:%d", m_fd, this, pn);
+		}
+		else if(pn == 0){
+			LOG_DEBUG("udp fd:%d socket:%p unpack size:0", m_fd, this);
 		}
 		else{
 			//解包失败

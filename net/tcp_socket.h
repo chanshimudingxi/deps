@@ -13,22 +13,22 @@
 #include <arpa/inet.h>
 
 #include "socket_base.h"
-#include "block_buffer.h"
-#include "sys/log.h"
-#include "sys/util.h"
+#include "blockbuffer.h"
+#include "../sys/logger.h"
+#include "../sys/util.h"
 
 class TcpSocket: public SocketBase{
 public:
-	static bool Listen(int port, int backlog, SocketContainer *pContainer, ProtoParser* handler);
-    static bool Connect(uint32_t ip, int port, SocketContainer *pContainer, ProtoParser* handler, int* connectedfd); 
+	static bool Listen(int port, int backlog, SocketContainer *pContainer, PacketHandler* handler);
+    static bool Connect(uint32_t ip, int port, SocketContainer *pContainer, PacketHandler* handler, int* connectedfd); 
 
-    TcpSocket(SocketContainer *pContainer, ProtoParser* handler);
+    TcpSocket(SocketContainer *pContainer, PacketHandler* handler);
     ~TcpSocket();
     TcpSocket()=delete;
     TcpSocket(const TcpSocket&)=delete;
     TcpSocket& operator=(const TcpSocket&)=delete;
 
-	virtual void HandleRead();
+	virtual void HandleRead(char* max_read_buffer, size_t max_read_size);
 	virtual void HandleWrite();
     virtual void HandleError();
     virtual void HandleTimeout();
@@ -37,11 +37,10 @@ public:
     virtual void Close();
 private:	
     void Accept();
-    void Read();
+    void Read(char* max_read_buffer, size_t max_read_size);
     void Write();
     bool EnableTcpKeepAlive(int aliveTime, int interval, int count);
     bool EnableTcpNoDelay();
-    SocketBuffer* m_input;              //接收缓冲区
-    SocketBuffer* m_output;             //发送缓冲区
-	char m_buffer[READ_RECV_BUFF_SIZE];
+    BlockBuffer<def_block_alloc_4k, 1024>* m_input;              //接收缓冲区
+    BlockBuffer<def_block_alloc_4k, 1024>* m_output;             //发送缓冲区
 };

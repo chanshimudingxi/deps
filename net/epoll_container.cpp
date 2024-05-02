@@ -62,7 +62,7 @@ bool EpollContainer::AddSocket(SocketBase* s, uint64_t events)
     if ( -1 == ret ){
         return false;
     }
-    LOG_DEBUG("fd:%d socket:%p add events:%x", fd, s, events);
+    LOG_DEBUG("fd:%d socket:%p add events:%llx", fd, s, events);
 	m_socketNum++;
     return true;
 }
@@ -117,7 +117,7 @@ bool EpollContainer::ModSocket(SocketBase* s, uint64_t events)
     if ( -1 == ret ){
         return false;
     }
-    LOG_DEBUG("fd:%d socket:%p mod events:%x", fd, s, events);
+    LOG_DEBUG("fd:%d socket:%p mod events:%llx", fd, s, events);
 	
     return true;
 }
@@ -235,7 +235,7 @@ void EpollContainer::HandleSockets(){
         #ifdef __APPLE__
         if (EVFILT_READ == m_events[i].filter) {
             LOG_DEBUG("fd:%d socket:%p read events:%x",fd, s, m_events[i].flags);
-            s->HandleRead();
+            s->HandleRead(m_maxReadBuffer, MAX_READ_BUFF_SIZE);
         } else if (EVFILT_WRITE == m_events[i].filter) {
             LOG_DEBUG("fd:%d socket:%p write events:%x",fd, s, m_events[i].flags);
             s->HandleWrite();
@@ -245,7 +245,7 @@ void EpollContainer::HandleSockets(){
             LOG_ERROR("fd:%d socket:%p error events:%x",fd, s, m_events[i].events);
             s->HandleError();
             continue;
-        }		
+        }
 
         if(EPOLLIN == (m_events[i].events & EPOLLIN)){
             LOG_DEBUG("fd:%d socket:%p read events:%x",fd, s, m_events[i].events);

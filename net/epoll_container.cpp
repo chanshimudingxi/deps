@@ -166,6 +166,8 @@ bool EpollContainer::Init() {
         LOG_ERROR("%s",strerror(errno));
         return false;
     }
+	rlim_t oldlimit = rlim.rlim_cur;
+	rlim_t oldlimitmax = rlim.rlim_max;
 	rlim.rlim_max = rlim.rlim_cur = m_maxFdCount;
 	if (setrlimit(RLIMIT_NOFILE, &rlim) == -1) {
 		LOG_ERROR("%s",strerror(errno));
@@ -191,6 +193,8 @@ bool EpollContainer::Init() {
 		return false;
 	}
     
+	LOG_INFO("set open files old limit: %llu:%llu to limit: %llu:%llu success", 
+		oldlimit, oldlimitmax, m_maxFdCount, m_maxFdCount);
     return true;
 }
 

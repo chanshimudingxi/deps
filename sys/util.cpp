@@ -1,4 +1,5 @@
 #include "util.h"
+#include <unistd.h>
 
 std::string Util::DumpHex(const char* data,int size){
     if(nullptr == data || size < 1){
@@ -43,13 +44,7 @@ std::string Util::UintIP2String(uint32_t ip){
 
 std::string Util::getCWD()
 {
-	char *cwd = nullptr;
-#ifdef __APPLE__  
-	char buffer[1024];
-	cwd = getcwd(buffer, sizeof(buffer));
-#else
-	cwd = get_current_dir_name();
-#endif
+	char* cwd = getcwd(NULL, 0);
 	std::string ret = ".";
 	if (nullptr != cwd)
 	{

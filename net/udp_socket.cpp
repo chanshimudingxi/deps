@@ -249,7 +249,7 @@ bool UdpSocket::SendPacket(const char* data, size_t size){
 
 	int n = sendto(m_fd, data, size, 0, (struct sockaddr*)&m_peerAddr, sizeof(struct sockaddr));
     if (n == -1) {
-        LOG_ERROR("udp fd:%d socket:%p %s need resend", m_fd, this, strerror(errno));
+        LOG_ERROR("udp fd:%d socket:%p send error:%s", m_fd, this, strerror(errno));
 		return false;
     }
 	else if(n == 0){

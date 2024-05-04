@@ -39,14 +39,14 @@ bool EpollContainer::AddSocket(SocketBase* s, uint64_t events)
     if(SOCKET_EVENT_READ == (events & SOCKET_EVENT_READ)){
     #ifdef __APPLE__
         //添加Read事件，EVFILT_READ表示READ事件，操作为添加或者打开，多次重复操作没有副作用
-        EV_SET(&event[n++], fd, EVFILT_READ, EV_ADD|EV_ENABLE, 0, 0, (void*)(intptr_t)fd);
+        EV_SET(&event[n++], fd, EVFILT_READ, EV_ADD, 0, 0, (void*)(intptr_t)fd);
     #else
         epollEvents = EPOLLIN;
     #endif
     }
     if(SOCKET_EVENT_WRITE == (events & SOCKET_EVENT_WRITE)){
     #ifdef __APPLE__
-        EV_SET(&event[n++], fd, EVFILT_WRITE, EV_ADD|EV_ENABLE, 0, 0, (void*)(intptr_t)fd);
+        EV_SET(&event[n++], fd, EVFILT_WRITE, EV_ADD, 0, 0, (void*)(intptr_t)fd);
     #else
         epollEvents == 0 ? epollEvents = EPOLLOUT : epollEvents |= EPOLLOUT;
     #endif
@@ -66,9 +66,10 @@ bool EpollContainer::AddSocket(SocketBase* s, uint64_t events)
     ret = epoll_ctl(m_epfd, EPOLL_CTL_ADD, fd, &event);
 #endif
     if ( -1 == ret ){
+        LOG_DEBUG("fd:%d socket:%p add events:%llx failed", fd, s, events);
         return false;
     }
-    LOG_DEBUG("fd:%d socket:%p add events:%llx", fd, s, events);
+    LOG_DEBUG("fd:%d socket:%p add events:%llx success", fd, s, events);
 	m_socketNum++;
     return true;
 }
@@ -76,10 +77,12 @@ bool EpollContainer::AddSocket(SocketBase* s, uint64_t events)
 bool EpollContainer::ModSocket(SocketBase* s, uint64_t events)
 {
     if(nullptr == s){
+        LOG_DEBUG("socket is null");
         return false;
     }
     int fd = s->GetFd();
     if(nullptr == m_socketArray[fd]){
+        LOG_DEBUG("fd:%d socket:%p not in socket container", fd, s);
         return false;
     }
     int ret = 0;
@@ -93,7 +96,7 @@ bool EpollContainer::ModSocket(SocketBase* s, uint64_t events)
 
     if(SOCKET_EVENT_READ == (events & SOCKET_EVENT_READ)){
     #ifdef __APPLE__
-        EV_SET(&event[n++], fd, EVFILT_READ, EV_ADD|EV_ENABLE, 0, 0, (void*)(intptr_t)fd);
+        EV_SET(&event[n++], fd, EVFILT_READ, EV_ADD, 0, 0, (void*)(intptr_t)fd);
     #else
         epollEvents = EPOLLIN;
     #endif
@@ -106,7 +109,7 @@ bool EpollContainer::ModSocket(SocketBase* s, uint64_t events)
 
     if(SOCKET_EVENT_WRITE == (events & SOCKET_EVENT_WRITE)){
     #ifdef __APPLE__
-        EV_SET(&event[n++], fd, EVFILT_WRITE, EV_ADD|EV_ENABLE, 0, 0, (void*)(intptr_t)fd);
+        EV_SET(&event[n++], fd, EVFILT_WRITE, EV_ADD, 0, 0, (void*)(intptr_t)fd);
     #else
         epollEvents == 0 ? epollEvents = EPOLLOUT : epollEvents |= EPOLLOUT;
     #endif
@@ -133,10 +136,17 @@ bool EpollContainer::ModSocket(SocketBase* s, uint64_t events)
 #endif
 
     if ( -1 == ret ){
+        #ifdef __APPLE__
+        if(ENOENT != errno){//The event could not be found to be modified or deleted.
+            LOG_ERROR("fd:%d socket:%p mod events:%llx failed %s", fd, s, events, strerror(errno));
+            return false;
+        }
+        #else
+        LOG_ERROR("fd:%d socket:%p mod events:%llx failed %s", fd, s, events, strerror(errno));
         return false;
+        #endif
     }
-    LOG_DEBUG("fd:%d socket:%p mod events:%llx", fd, s, events);
-	
+    LOG_DEBUG("fd:%d socket:%p mod events:%llx success", fd, s, events);
     return true;
 }
 

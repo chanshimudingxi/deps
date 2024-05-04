@@ -314,7 +314,7 @@ void TcpSocket::Write() {
     }
 
     while(true){
-        int n = send(m_fd,m_output->data(),m_output->size(),0);
+        int n = send(m_fd, m_output->data(), m_output->size(), 0);
         if (n == -1) {
             //没发完的需要等下次可以发的时候继续发
             if(errno == EAGAIN && 
@@ -335,8 +335,8 @@ void TcpSocket::Write() {
                 if(!m_container->ModSocket(this, SOCKET_EVENT_READ|SOCKET_EVENT_ERROR)){
                     LOG_ERROR("tcp fd:%d socket:%p %s", m_fd, this, strerror(errno));
                     Close();
-                    return;
                 }
+                return;
             }
         }
     }
@@ -368,6 +368,7 @@ bool TcpSocket::SendPacket(const char* data, size_t size){
 		return true;
 	}
 	if(m_output->append(data, size)){
+        LOG_DEBUG("tcp fd:%d socket:%p send size:%zd success", m_fd, this, size);
         Write();
         return true;
     }

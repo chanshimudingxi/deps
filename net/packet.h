@@ -200,7 +200,7 @@ public:
     {
         m.marshal(bodyPack);
         m_packetHeader.setLength(size());
-        m_packetHeader.setSubLength(PAXOS_PROTO_HEADER_SIZE + bodySize());
+        m_packetHeader.setSubLength(size()-PROTO_HEADER_SIZE);
         m_packetHeader.setSubCmd(subCmd);
         headPack.replace_uint16(0, m_packetHeader.getLength());
         headPack.replace_uint16(2, m_packetHeader.getMainCmd());
@@ -225,10 +225,10 @@ public:
     static size_t mainHeaderSize(){return PROTO_HEADER_SIZE;}
     static size_t headerSize(){return PROTO_HEADER_SIZE + PAXOS_PROTO_HEADER_SIZE;}
     static uint16_t pickLen(const void * data){uint16_t i = *((uint16_t*)data);return XHTONS(i);};
-    static uint16_t pickCmd(const void * data){uint16_t i = *(uint16_t*)((char*)data+2);return XHTONS(i);};
+    static uint16_t pickCmd(const void * data){uint16_t i = *((uint16_t*)((char*)data+2));return XHTONS(i);};
     static uint32_t pickSeq(const char *data){uint32_t i = *((uint32_t*)((char*)data+4)); return XHTONL(i);};
-    static uint16_t pickSubLen(const void * data){uint16_t i = *((uint16_t*)data+8);return XHTONS(i);};
-    static uint16_t pickSubCmd(const void * data){uint16_t i = *(uint16_t*)((char*)data+10);return XHTONS(i);};
+    static uint16_t pickSubLen(const void * data){uint16_t i = *((uint16_t*)((char*)data+8));return XHTONS(i);};
+    static uint16_t pickSubCmd(const void * data){uint16_t i = *((uint16_t*)((char*)data+10));return XHTONS(i);};
     static uint16_t pickResCode(const char *data){uint16_t i = *((uint16_t*)((char*)data+12)); return XHTONS(i);};
 
     Decoder(const char *data, uint16_t sz):up(data, sz){};

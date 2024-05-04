@@ -119,7 +119,7 @@ void TcpSocket::HandleError()
 void TcpSocket::HandleTimeout()
 {
     time_t now = time(NULL);
-    if(m_state == SocketState::accept){
+    if(m_state == SocketState::accept || m_state == SocketState::connected || m_state == SocketState::connecting){
         if(m_timeout > 0 && m_lastAccessTime > 0 && m_lastAccessTime + m_timeout < now){
             LOG_ERROR("tcp fd:%d socket:%p idle_time:%d timeout:%d", 
 				m_fd, this, (int)(now - m_lastAccessTime), m_timeout);
@@ -179,17 +179,17 @@ bool TcpSocket::Listen(int port, int backlog, SocketContainer *pContainer, Packe
     return true;
 }
 
-bool TcpSocket::Connect(uint32_t ip, int port, SocketContainer *pContainer, PacketHandler* handler, int* connectedfd){
+SocketBase* TcpSocket::Connect(uint32_t ip, int port, SocketContainer *pContainer, PacketHandler* handler){
     int fd = socket(AF_INET,SOCK_STREAM,0);
     if(fd == -1){
         LOG_ERROR("tcp %s %s:%u",strerror(errno), Util::UintIP2String(ip).c_str(), port);
-        return false; 
+        return nullptr; 
     }
 
     int flags = fcntl(fd, F_GETFL, 0);
     if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
         LOG_ERROR("tcp fd:%d %s %s:%u",fd,strerror(errno), Util::UintIP2String(ip).c_str(), port);
-        return false;
+        return nullptr;
     }
 
     struct sockaddr_in peerAddr;
@@ -209,22 +209,19 @@ bool TcpSocket::Connect(uint32_t ip, int port, SocketContainer *pContainer, Pack
     if(ret == 0 && pContainer->AddSocket(s, SOCKET_EVENT_READ|SOCKET_EVENT_ERROR)){
         s->SetState(SocketState::connected);
         LOG_DEBUG("tcp fd:%d socket:%p connected %s:%u",s->GetFd(), s, Util::UintIP2String(ip).c_str(), port);
-        *connectedfd = s->GetFd();
-        return true;
+        return s;
     }
 	//需要额外关注可写事件，可写这表明连接已经connected
     if(ret == -1 && errno == EINPROGRESS && pContainer->AddSocket(s, SOCKET_EVENT_READ|SOCKET_EVENT_WRITE|SOCKET_EVENT_ERROR)){
         s->SetState(SocketState::connecting);
 		s->SetTimeout(TCP_CONNECT_TIMEOUT);
         LOG_INFO("tcp fd:%d socket:%p connect %s:%u in async mode", s->GetFd(),s, Util::UintIP2String(ip).c_str(), port);
-        *connectedfd = s->GetFd();
-        return true;
+        return s;
     }
 
     LOG_ERROR("tcp fd:%d socket:%p %s %s:%u",fd, s, strerror(errno), Util::UintIP2String(ip).c_str(), port);
     s->Close();
-    *connectedfd = -1;
-    return false;
+    return nullptr;
 }
 
 
@@ -234,14 +231,14 @@ void TcpSocket::Accept() {
 	int addrLen = sizeof(addr);
 	int afd = accept(m_fd, (struct sockaddr*)(&addr),(socklen_t*)&addrLen);
 	if (-1 == afd) {
-        LOG_ERROR("tcp lfd:%d %s", m_fd, strerror(errno));
+        LOG_ERROR("tcp listenfd:%d %s", m_fd, strerror(errno));
 		Close();
         return;
 	}
 
 	int flags = fcntl(afd, F_GETFL, 0);
 	if (fcntl(afd, F_SETFL, flags | O_NONBLOCK) == -1) {
-		LOG_ERROR("tcp lfd:%d fd:%d %s",m_fd, afd, strerror(errno));
+		LOG_ERROR("tcp listenfd:%d fd:%d %s",m_fd, afd, strerror(errno));
         Close();
         return;
 	}
@@ -253,21 +250,21 @@ void TcpSocket::Accept() {
 	s->SetLastAccessTime(s->GetCreateTime());
 	s->SetTimeout(TCP_ACCESS_TIMEOUT);
 	s->SetState(SocketState::accept);
-	LOG_DEBUG("tcp lfd:%d fd:%d socket:%p new socket", m_fd, afd, s);
+	LOG_DEBUG("tcp listenfd:%d fd:%d socket:%p new socket", m_fd, afd, s);
 	//只需要关注可读事件
     if(!m_container->AddSocket(s, SOCKET_EVENT_READ|SOCKET_EVENT_ERROR)){
-        LOG_ERROR("tcp lfd:%d fd:%d socket:%p add events failed", m_fd, afd, s);
+        LOG_ERROR("tcp listenfd:%d fd:%d socket:%p add events failed", m_fd, afd, s);
         s->Close();
         return;
     }
 
     if(!s->EnableTcpNoDelay()){
-        LOG_ERROR("tcp lfd:%d fd:%d socket:%p set tcp no delay failed", m_fd, afd, s);
+        LOG_ERROR("tcp listenfd:%d fd:%d socket:%p set tcp no delay failed", m_fd, afd, s);
         s->Close();
         return;
     }
 
-    LOG_INFO("tcp lfd:%d fd:%d socket:%p accept", m_fd, afd, s);
+    LOG_INFO("tcp listenfd:%d fd:%d socket:%p accept", m_fd, afd, s);
 }
 
 void TcpSocket::Read(char* max_read_buffer, size_t max_read_size) {
@@ -370,9 +367,11 @@ bool TcpSocket::SendPacket(const char* data, size_t size){
 	if(nullptr == data || size < 1){
 		return true;
 	}
-	m_output->append(data, size);
-	Write();
-    return true;
+	if(m_output->append(data, size)){
+        Write();
+        return true;
+    }
+    return false;
 }
 
 int TcpSocket::HandlePacket(const char* data, size_t size){

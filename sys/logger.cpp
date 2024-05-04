@@ -118,7 +118,12 @@ void Logger::maybeRotate() {
 }
 
 void Logger::logv(int level, const char *file, int line, const char *func, const char *fmt...) {
+
+#ifdef __APPLE__
+    static thread_local uint64_t tid = syscall(SYS_thread_selfid);
+#else
     static thread_local uint64_t tid = syscall(SYS_gettid);
+#endif
 
     if (level > m_level) {
         return;
@@ -133,9 +138,9 @@ void Logger::logv(int level, const char *file, int line, const char *func, const
     const time_t seconds = now_tv.tv_sec;
     struct tm t;
     localtime_r(&seconds, &t);
-    p += snprintf(p, limit - p, "%04d/%02d/%02d-%02d:%02d:%02d.%06d %lx %s %s:%d ", 
+    p += snprintf(p, limit - p, "%04d/%02d/%02d-%02d:%02d:%02d.%06d(%lx)[%s:%d][%s]::%s ", 
         t.tm_year + 1900, t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec,
-        static_cast<int>(now_tv.tv_usec), (long) tid, m_levelStrs[level], file, line);
+        static_cast<int>(now_tv.tv_usec), (long) tid, file, line, m_levelStrs[level], func);
     va_list args;
     va_start(args, fmt);
     p += vsnprintf(p, limit - p, fmt, args);

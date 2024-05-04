@@ -1,7 +1,7 @@
 #include "epoll_container.h"
 
 /**
- * @brief Construct a new Epoll Container:: Epoll Container object
+ * @brief Construct a new fd Container
  * 
  * @param maxFdCount 最大描述符个数
  * @param maxFdEventWaitTime 最长等待事件发生时间
@@ -98,6 +98,12 @@ bool EpollContainer::ModSocket(SocketBase* s, uint64_t events)
         epollEvents = EPOLLIN;
     #endif
     }
+    else{
+    #ifdef __APPLE__
+        EV_SET(&event[n++], fd, EVFILT_READ, EV_DELETE, 0, 0, (void*)(intptr_t)fd);
+    #endif
+    }
+
     if(SOCKET_EVENT_WRITE == (events & SOCKET_EVENT_WRITE)){
     #ifdef __APPLE__
         EV_SET(&event[n++], fd, EVFILT_WRITE, EV_ADD|EV_ENABLE, 0, 0, (void*)(intptr_t)fd);
@@ -105,6 +111,12 @@ bool EpollContainer::ModSocket(SocketBase* s, uint64_t events)
         epollEvents == 0 ? epollEvents = EPOLLOUT : epollEvents |= EPOLLOUT;
     #endif
     }
+    else{
+    #ifdef __APPLE__
+        EV_SET(&event[n++], fd, EVFILT_WRITE, EV_DELETE, 0, 0, (void*)(intptr_t)fd);
+    #endif
+    }
+
     if(SOCKET_EVENT_ERROR == (events & SOCKET_EVENT_ERROR)){
     #ifdef __APPLE__
     #else
@@ -139,6 +151,7 @@ bool EpollContainer::DelSocket(SocketBase* s)
     //事件容器中删除描述符 
     int ret = 0;
     #ifdef __APPLE__
+    //Calling close() on a file descriptor will remove any kevents that reference the descriptor
     // struct kevent event[2];
     // int n = 0;
     // //删除Read事件，EVFILT_READ表示READ事件，操作为添加或者打开，多次重复操作没有副作用
@@ -199,7 +212,7 @@ bool EpollContainer::Init() {
 		return false;
 	}
     
-	LOG_INFO("set open files old limit: %llu:%llu to limit: %llu:%llu success", 
+	LOG_INFO("set open files old limit: %llu:%llu to limit: %d:%d success", 
 		oldlimit, oldlimitmax, m_maxFdCount, m_maxFdCount);
     return true;
 }
@@ -244,26 +257,26 @@ void EpollContainer::HandleSockets(){
         
         #ifdef __APPLE__
         if (EVFILT_READ == m_events[i].filter) {
-            LOG_DEBUG("fd:%d socket:%p read events:%x",fd, s, m_events[i].flags);
+            LOG_DEBUG("fd:%d socket:%p kqueue read events:%d",fd, s, m_events[i].filter);
             s->HandleRead(m_maxReadBuffer, MAX_READ_BUFF_SIZE);
         } else if (EVFILT_WRITE == m_events[i].filter) {
-            LOG_DEBUG("fd:%d socket:%p write events:%x",fd, s, m_events[i].flags);
+            LOG_DEBUG("fd:%d socket:%p kqueue write events:%d",fd, s, m_events[i].filter);
             s->HandleWrite();
         }
         #else
         if (EPOLLERR == (m_events[i].events & EPOLLERR)) {
-            LOG_ERROR("fd:%d socket:%p error events:%x",fd, s, m_events[i].events);
+            LOG_ERROR("fd:%d socket:%p epoll events:%x",fd, s, m_events[i].events);
             s->HandleError();
             continue;
         }
 
         if(EPOLLIN == (m_events[i].events & EPOLLIN)){
-            LOG_DEBUG("fd:%d socket:%p read events:%x",fd, s, m_events[i].events);
+            LOG_DEBUG("fd:%d socket:%p epoll read events:%x",fd, s, m_events[i].events);
             s->HandleRead();
         }
 
         if(EPOLLOUT == (m_events[i].events & EPOLLOUT)){
-            LOG_DEBUG("fd:%d socket:%p write events:%x",fd, s, m_events[i].events);
+            LOG_DEBUG("fd:%d socket:%p epoll write events:%x",fd, s, m_events[i].events);
             s->HandleWrite();
         }
         #endif
@@ -273,7 +286,6 @@ void EpollContainer::HandleSockets(){
 void EpollContainer::CheckTimeoutSocket(){
     //设置了业务层面的心跳超时检测
     static int checkFd=0; 
-    time_t now = time(NULL);
     for(int i=0; i < 1000 && i < m_maxFdCount; ++i){
         //利用了操作系统分配描述符的规律，描述符id在[0~maxFdCount)之间
         checkFd = checkFd < m_maxFdCount-1 ? checkFd+1 : 0;

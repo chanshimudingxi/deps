@@ -20,7 +20,7 @@
 class UdpSocket : public SocketBase{
 public:
 	static bool Listen(int port, int backlog, SocketContainer *pContainer, PacketHandler* handler);
-	static bool Connect(uint32_t ip, int port, SocketContainer *pContainer, PacketHandler* handler, int* connectedfd); 
+	static SocketBase* Connect(uint32_t ip, int port, SocketContainer *pContainer, PacketHandler* handler); 
 
     UdpSocket(SocketContainer *pContainer, PacketHandler* handler);
     ~UdpSocket();

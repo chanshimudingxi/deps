@@ -210,10 +210,10 @@ public:
         headPack.replace_uint16(12, m_packetHeader.getResCode());
     }
 private:
+    PacketHeader m_packetHeader;
 	PackBuffer pb;
 	Pack headPack;
 	Pack bodyPack;
-    PacketHeader m_packetHeader;
 };
 
 //解包类

@@ -1,5 +1,11 @@
 #include "epoll_container.h"
 
+/**
+ * @brief Construct a new Epoll Container:: Epoll Container object
+ * 
+ * @param maxFdCount 最大描述符个数
+ * @param maxFdEventWaitTime 最长等待事件发生时间
+ */
 EpollContainer::EpollContainer(int maxFdCount, int maxFdEventWaitTime){
     m_maxFdCount = maxFdCount;
     m_maxFdEventWaitTime = maxFdEventWaitTime;

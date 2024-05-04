@@ -27,7 +27,7 @@
 class EpollContainer : public SocketContainer{
 public:
 	EpollContainer(int maxFdCount, int maxFdEventWaitTime);
-	~EpollContainer();
+	virtual ~EpollContainer();
     virtual bool AddSocket(SocketBase* s, uint64_t events);
     virtual bool ModSocket(SocketBase* s, uint64_t events);
     virtual bool DelSocket(SocketBase* s);

@@ -12,7 +12,7 @@ class SocketContainer
 {
 public:
     SocketContainer(){}
-    ~SocketContainer(){}
+    virtual ~SocketContainer(){}
     virtual bool AddSocket(SocketBase* s, uint64_t events) = 0;
     virtual bool ModSocket(SocketBase* s, uint64_t events) = 0;
     virtual bool DelSocket(SocketBase* s)  = 0;

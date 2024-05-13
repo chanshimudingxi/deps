@@ -67,29 +67,29 @@ int Logger::setFileName(const std::string &filename) {
 
 void Logger::maybeRotate() {
     time_t now = time(NULL);
-    int64_t lastRotate = m_realRotate.load();
+    long lastRotate = m_realRotate.load();
     if (m_filename.empty() || (now - timezone) / m_rotateInterval == (lastRotate - timezone) / m_rotateInterval) {
         return;
     }
     
-    long old = m_realRotate.exchange(now);
+    long lastRotateBackup = m_realRotate.exchange(now);
     //如果realRotate的值是新的，那么返回。否则，获得了旧值，进行rotate。防止多个线程同时rotate
-    if ((old - timezone) / m_rotateInterval == (lastRotate - timezone) / m_rotateInterval) {
+    if ((now - timezone) / m_rotateInterval == (lastRotateBackup - timezone) / m_rotateInterval) {
         return;
     }
     
     struct tm ntm;
     localtime_r(&now, &ntm);
     char newname[4096];
-    snprintf(newname, sizeof(newname), "%s.%d_%02d_%02d_%02d_%02d", 
-        m_filename.c_str(), ntm.tm_year + 1900, ntm.tm_mon + 1, ntm.tm_mday, ntm.tm_hour, ntm.tm_min);
+    snprintf(newname, sizeof(newname), "%s.%d_%02d_%02d_%02d_%02d_%02d", 
+        m_filename.c_str(), ntm.tm_year + 1900, ntm.tm_mon + 1, ntm.tm_mday, ntm.tm_hour, ntm.tm_min, ntm.tm_sec);
     const char *oldname = m_filename.c_str();
     int err = rename(oldname, newname);
     if (err == -1) {
         if(ENOENT != errno){
             fprintf(stderr, "rename logfile %s -> %s failed msg: %s\n", oldname, newname, 
                 strerror(errno));
-            m_realRotate.exchange(old);
+            m_realRotate.exchange(lastRotateBackup);
             return;
         }
     }
@@ -98,7 +98,7 @@ void Logger::maybeRotate() {
     if (fd == -1) {
         fprintf(stderr, "open log file %s failed. msg: %s ignored\n", m_filename.c_str(), 
             strerror(errno));
-        m_realRotate.exchange(old);
+        m_realRotate.exchange(lastRotateBackup);
         return;
     }
 
@@ -106,7 +106,7 @@ void Logger::maybeRotate() {
     if(err == -1){
         fprintf(stderr, "dup2 failed. %s\n", strerror(errno));
         close(fd);
-        m_realRotate.exchange(old);
+        m_realRotate.exchange(lastRotateBackup);
         return;
     }
 
@@ -157,11 +157,11 @@ void Logger::logv(int level, const char *file, int line, const char *func, const
         fprintf(stderr, "write log file %s failed. written %d errmsg: %s\n", 
             m_filename.c_str(), err, strerror(errno));
     }
-    if (level <= ERROR) {
-        syslog(LOG_ERR, "%s", buffer + 27);
-    }
-    if (level == FATAL) {
-        fprintf(stderr, "%s", buffer);
-        // assert(0);
-    }
+    // if (level <= ERROR) {
+    //     syslog(LOG_ERR, "%s", buffer + 27);
+    // }
+    // if (level == FATAL) {
+    //     fprintf(stderr, "%s", buffer);
+    //     assert(0);
+    // }
 }

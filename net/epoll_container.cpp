@@ -282,7 +282,7 @@ void EpollContainer::HandleSockets(){
 
         if(EPOLLIN == (m_events[i].events & EPOLLIN)){
             LOG_DEBUG("fd:%d socket:%p epoll read events:%x",fd, s, m_events[i].events);
-            s->HandleRead();
+            s->HandleRead(m_maxReadBuffer, MAX_READ_BUFF_SIZE);
         }
 
         if(EPOLLOUT == (m_events[i].events & EPOLLOUT)){

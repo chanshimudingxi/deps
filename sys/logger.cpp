@@ -14,7 +14,7 @@
 #include <sys/syscall.h>
 
 
-Logger::Logger() : m_level(INFO), m_rotateInterval(86400) {
+Logger::Logger() : m_level(INFO), m_rotateInterval(10) {
     tzset();
     m_fd = -1;
     m_realRotate = time(NULL);

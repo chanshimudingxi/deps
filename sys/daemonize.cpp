@@ -47,7 +47,7 @@ int daemonize()
 	if (rl.rlim_max == RLIM_INFINITY){
 		rl.rlim_max = 1024;
 	}
-	for (int i = 0; i < rl.rlim_max; i++){
+	for (size_t i = 0; i < rl.rlim_max; i++){
 		close(i);
 	}
 

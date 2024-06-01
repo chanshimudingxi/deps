@@ -845,5 +845,3 @@ inline const Unpack& operator >> (const Unpack& s, std::set<T>& c)
     return s;
 }
 }
-#endif
-

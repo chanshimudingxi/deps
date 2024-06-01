@@ -7,6 +7,7 @@
 #include <time.h>
 #include <errno.h>
 
+namespace deps{
 /**
  * 线程信号：所有锁可以在上面等待信号发生，和ThreadMutex配合使用。
  * */
@@ -30,3 +31,4 @@ public:
 private:
 	mutable pthread_cond_t m_cond;
 };
+}

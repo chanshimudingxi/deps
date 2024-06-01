@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <sys/time.h>
 
+using namespace deps;
 
 Logger::Logger() : m_level(INFO), m_rotateInterval(86400) {
     tzset();

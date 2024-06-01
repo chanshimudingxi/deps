@@ -1,5 +1,6 @@
 #include "thread_mutex.h"
 
+namespace deps{
 ThreadMutex::ThreadMutex(){
 	int ret;
     pthread_mutexattr_t attr;
@@ -37,4 +38,5 @@ bool ThreadMutex::tryLock()const{
 void ThreadMutex::unlock()const{
     int ret = pthread_mutex_unlock(&m_mutex);
 	assert(ret == 0);
+}
 }

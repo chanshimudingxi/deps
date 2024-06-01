@@ -6,6 +6,7 @@
 #include <time.h>
 #include <errno.h>
 
+namespace deps{
 /**
  * 线程锁：不可重复加锁，即同一个线程不可以重复加锁 通常不直接使用，和Monitor配合使用
  **/
@@ -28,3 +29,4 @@ friend class ThreadCond;
 protected:
     mutable pthread_mutex_t m_mutex;
 };
+}

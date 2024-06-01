@@ -1,5 +1,6 @@
 #include "epoll_container.h"
 
+using namespace deps;
 /**
  * @brief Construct a new fd Container
  * 
@@ -66,10 +67,10 @@ bool EpollContainer::AddSocket(SocketBase* s, uint64_t events)
     ret = epoll_ctl(m_epfd, EPOLL_CTL_ADD, fd, &event);
 #endif
     if ( -1 == ret ){
-        LOG_DEBUG("fd:%d socket:%p add events:%llx failed", fd, s, events);
+        LOG_DEBUG("fd:%d socket:%p add events:%lx failed", fd, s, events);
         return false;
     }
-    LOG_DEBUG("fd:%d socket:%p add events:%llx success", fd, s, events);
+    LOG_DEBUG("fd:%d socket:%p add events:%lx success", fd, s, events);
 	m_socketNum++;
     return true;
 }
@@ -138,15 +139,15 @@ bool EpollContainer::ModSocket(SocketBase* s, uint64_t events)
     if ( -1 == ret ){
         #ifdef __APPLE__
         if(ENOENT != errno){//The event could not be found to be modified or deleted.
-            LOG_ERROR("fd:%d socket:%p mod events:%llx failed %s", fd, s, events, strerror(errno));
+            LOG_ERROR("fd:%d socket:%p mod events:%lx failed %s", fd, s, events, strerror(errno));
             return false;
         }
         #else
-        LOG_ERROR("fd:%d socket:%p mod events:%llx failed %s", fd, s, events, strerror(errno));
+        LOG_ERROR("fd:%d socket:%p mod events:%lx failed %s", fd, s, events, strerror(errno));
         return false;
         #endif
     }
-    LOG_DEBUG("fd:%d socket:%p mod events:%llx success", fd, s, events);
+    LOG_DEBUG("fd:%d socket:%p mod events:%lx success", fd, s, events);
     return true;
 }
 
@@ -222,7 +223,7 @@ bool EpollContainer::Init() {
 		return false;
 	}
     
-	LOG_INFO("set open files old limit: %llu:%llu to limit: %d:%d success", 
+	LOG_INFO("set open files old limit: %lu:%lu to limit: %d:%d success", 
 		oldlimit, oldlimitmax, m_maxFdCount, m_maxFdCount);
     return true;
 }

@@ -1,6 +1,4 @@
-
-#ifndef SERIALIZE_H
-#define SERIALIZE_H
+#pragma once
 
 #include <string>
 #include <iostream>
@@ -11,7 +9,7 @@
 #include "blockbuffer.h"
 #include "varstr.h"
 
-
+namespace deps{
 struct PacketError : public std::runtime_error
 {
 	PacketError(const std::string & w) :
@@ -846,6 +844,6 @@ inline const Unpack& operator >> (const Unpack& s, std::set<T>& c)
     }
     return s;
 }
-
+}
 #endif
 

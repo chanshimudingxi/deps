@@ -1,8 +1,8 @@
-#ifndef VARSTR_H
-#define VARSTR_H
+#pragma once
 
 #include <iostream>
 
+namespace deps{
 struct Varstr {
     const char * m_data;
     size_t m_size;
@@ -40,5 +40,4 @@ struct Varstr {
 inline std::ostream & operator <<(std::ostream & os, const Varstr & vs) {
     return os.write(vs.data(), std::streamsize(vs.size()));
 }
-
-#endif
+}

@@ -24,6 +24,7 @@
 #include "socket_base.h"
 #include "socket_container.h"
 
+namespace deps{
 class EpollContainer : public SocketContainer{
 public:
 	EpollContainer(int maxFdCount, int maxFdEventWaitTime);
@@ -59,3 +60,4 @@ private:
 
     char m_maxReadBuffer[MAX_READ_BUFF_SIZE];
 };
+}

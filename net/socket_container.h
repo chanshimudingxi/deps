@@ -2,6 +2,7 @@
 
 #include "socket_base.h"
 
+namespace deps{
 const uint64_t SOCKET_EVENT_READ = 1;
 const uint64_t SOCKET_EVENT_WRITE = 2;
 const uint64_t SOCKET_EVENT_ERROR = 4;
@@ -19,3 +20,4 @@ public:
 	virtual void HandleSockets() = 0;
 	virtual int  SocketNum() = 0;
 };
+}

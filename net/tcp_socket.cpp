@@ -1,5 +1,7 @@
 #include "tcp_socket.h"
 
+using namespace deps;
+
 TcpSocket::TcpSocket(SocketContainer *pContainer, PacketHandler* handler){
     m_container = pContainer;
     m_handler = handler;

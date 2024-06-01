@@ -1,5 +1,4 @@
-#ifndef LOGGER_H
-#define LOGGER_H
+#pragma once
 
 #include <cstdio>
 #include <atomic>
@@ -9,6 +8,7 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 
+namespace deps{
 #ifdef __APPLE__
 #define gettid() syscall(SYS_thread_selfid)
 #else
@@ -75,5 +75,4 @@ private:
     long m_rotateInterval;
     std::string m_filename;
 };
-
-#endif // LOGGER_H
+}

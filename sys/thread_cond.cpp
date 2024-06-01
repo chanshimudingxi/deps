@@ -1,5 +1,7 @@
 #include "thread_cond.h"
 
+using namespace deps;
+
 ThreadCond::ThreadCond(){
 	pthread_condattr_t attr;
 	int ret = pthread_condattr_init(&attr);

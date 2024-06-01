@@ -7,6 +7,9 @@
 #include <sys/resource.h>
 #include <errno.h>
 #include <string.h>
+#include "daemonize.h"
+
+using namespace deps;
 
 int daemonize()
 {

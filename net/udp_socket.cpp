@@ -1,5 +1,7 @@
 #include "udp_socket.h"
 
+using namespace deps;
+
 UdpSocket::UdpSocket(SocketContainer *pContainer, PacketHandler* handler){
     m_container = pContainer;
     m_handler = handler;

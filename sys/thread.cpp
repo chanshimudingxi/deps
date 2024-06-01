@@ -1,5 +1,7 @@
 #include "thread.h"
 
+using namespace deps;
+
 void Thread::threadEntry(Thread *pThread){
 	pThread->run();
 }

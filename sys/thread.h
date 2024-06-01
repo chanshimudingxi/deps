@@ -10,7 +10,7 @@
 #include "locker.h"
 #include "thread_mutex.h"
 
-
+namespace deps{
 class Thread{
 public:
 	Thread():m_running(false){
@@ -36,3 +36,4 @@ protected:
 	pthread_t m_tid;
 	ThreadMutex m_lock;//防止start函数被同时调用两次产生的问题
 };
+}

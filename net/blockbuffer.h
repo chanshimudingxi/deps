@@ -1,6 +1,4 @@
-
-#ifndef BLOCKBUFFER_H
-#define BLOCKBUFFER_H
+#pragma once
 
 #include <new>
 #include <assert.h>
@@ -8,6 +6,7 @@
 #include <string.h>
 #include <atomic>
 
+namespace deps{
 #ifdef MONITOR
 class MonitorCapacity
 {
@@ -266,4 +265,4 @@ private:
     Buffer * m_sb; // release need pointer.
     size_t m_pos;
 };
-#endif
+}

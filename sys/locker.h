@@ -1,5 +1,6 @@
 #pragma once
 
+namespace deps{
 //锁模板类，构造时加锁，析构时解锁。需配合ThreadMutex使用。
 template<typename T>
 class Locker{
@@ -61,3 +62,4 @@ private:
     mutable bool m_locked;
 
 };
+}

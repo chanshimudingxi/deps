@@ -9,7 +9,8 @@
 #include "locker.h"
 #include "thread_mutex.h"
 #include "thread_cond.h"
-       
+
+namespace deps{
 /**
  * @brief 线程安全队列
  */
@@ -184,4 +185,5 @@ template<typename T, typename D> bool ThreadQueue<T, D>::swap(queue_type &q, siz
     q.swap(m_queue);
 
     return true;
+}
 }

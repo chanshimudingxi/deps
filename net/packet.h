@@ -1,10 +1,10 @@
-#ifndef PACKET_H
-#define PACKET_H
+#pragma once
 
 #include <stdint.h>
 
 #include "marshall.h"
 
+namespace deps{
 #define RES_SUCCESS     0     //功能成功完成
 #define RES_FAIL        1     //功能失败
 
@@ -248,4 +248,4 @@ private:
 	Unpack up;
 };
 
-#endif
+}

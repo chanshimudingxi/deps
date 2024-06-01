@@ -17,6 +17,7 @@
 #include "../sys/logger.h"
 #include "../sys/util.h"
 
+namespace deps{
 class UdpSocket : public SocketBase{
 public:
 	static bool Listen(int port, int backlog, SocketContainer *pContainer, PacketHandler* handler);
@@ -43,3 +44,4 @@ private:
 private:
     BlockBuffer<def_block_alloc_4k, 1024>* m_input;              //接收缓冲区
 };
+}

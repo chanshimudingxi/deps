@@ -7,6 +7,7 @@
 #include "socket_container.h"
 #include "packet_handler.h"
 
+namespace deps{
 class SocketContainer;
 
 #define TCP_CONNECT_TIMEOUT  5				//TCP连接超时
@@ -94,3 +95,4 @@ protected:
     SocketContainer *m_container;      	//容器
     PacketHandler* m_handler;           //协议解析
 };
+}

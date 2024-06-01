@@ -6,6 +6,7 @@
 #include <time.h>
 #include <errno.h>
 
+namespace deps{
 class ThreadRWLock{
 public:
 	ThreadRWLock();
@@ -25,3 +26,4 @@ public:
 private:
 	mutable pthread_rwlock_t m_rwlock;
 };
+}

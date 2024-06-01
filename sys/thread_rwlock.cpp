@@ -1,5 +1,6 @@
 #include "thread_rwlock.h"
 
+using namespace deps;
 
 ThreadRWLock::ThreadRWLock(){
 	int ret = pthread_rwlock_init(&m_rwlock, NULL);

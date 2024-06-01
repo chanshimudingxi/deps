@@ -11,10 +11,9 @@
 #include <thread>
 #include <sys/types.h>
 #include <sys/time.h>
-#include <sys/syscall.h>
 
 
-Logger::Logger() : m_level(INFO), m_rotateInterval(10) {
+Logger::Logger() : m_level(INFO), m_rotateInterval(86400) {
     tzset();
     m_fd = -1;
     m_realRotate = time(NULL);
@@ -77,7 +76,7 @@ void Logger::maybeRotate() {
     if ((now - timezone) / m_rotateInterval == (lastRotateBackup - timezone) / m_rotateInterval) {
         return;
     }
-    
+
     struct tm ntm;
     localtime_r(&now, &ntm);
     char newname[4096];
@@ -117,51 +116,44 @@ void Logger::maybeRotate() {
     t.detach();
 }
 
-void Logger::logv(int level, const char *file, int line, const char *func, const char *fmt...) {
-
-#ifdef __APPLE__
-    static thread_local uint64_t tid = syscall(SYS_thread_selfid);
-#else
-    static thread_local uint64_t tid = syscall(SYS_gettid);
-#endif
-
+void Logger::vlog(int level, const char *fmt, va_list args){
     if (level > m_level) {
         return;
     }
+
     maybeRotate();
-    char buffer[4 * 1024];
+
+    char buffer[4096];
     char *p = buffer;
     char *limit = buffer + sizeof(buffer);
 
-    struct timeval now_tv;
-    gettimeofday(&now_tv, NULL);
-    const time_t seconds = now_tv.tv_sec;
-    struct tm t;
-    localtime_r(&seconds, &t);
-    p += snprintf(p, limit - p, "%04d/%02d/%02d-%02d:%02d:%02d.%06d(%lx)[%s:%d][%s]::%s ", 
-        t.tm_year + 1900, t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec,
-        static_cast<int>(now_tv.tv_usec), (long) tid, file, line, m_levelStrs[level], func);
-    va_list args;
-    va_start(args, fmt);
+    p += snprintf(p, limit - p, "[%5s]", m_levelStrs[level]);
+
     p += vsnprintf(p, limit - p, fmt, args);
-    va_end(args);
+
     p = std::min(p, limit - 2);
-    // trim the ending \n
-    // while (*--p == '\n') {
-    // }
     *++p = '\n';
     *++p = '\0';
+
     int fd = m_fd == -1 ? 1 : m_fd;
     int err = ::write(fd, buffer, p - buffer);
     if (err != p - buffer) {
         fprintf(stderr, "write log file %s failed. written %d errmsg: %s\n", 
             m_filename.c_str(), err, strerror(errno));
     }
-    // if (level <= ERROR) {
-    //     syslog(LOG_ERR, "%s", buffer + 27);
-    // }
-    // if (level == FATAL) {
-    //     fprintf(stderr, "%s", buffer);
-    //     assert(0);
-    // }
+    //错误级别日志写入syslog
+    if(level <= ERROR){
+        syslog(LOG_ERR, "%s", buffer + 35);
+    }
+}
+
+void logger_vlog(int level, const char *fmt, ...){
+    if (level > Logger::getLogger().getLogLevel()) { 
+        return;
+    }
+
+    va_list args;
+    va_start(args, fmt);
+    Logger::getLogger().vlog(level, fmt, args);
+    va_end(args);
 }

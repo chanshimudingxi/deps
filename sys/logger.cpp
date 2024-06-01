@@ -12,7 +12,7 @@
 #include <sys/types.h>
 #include <sys/time.h>
 
-using namespace deps;
+using deps::Logger;
 
 Logger::Logger() : m_level(INFO), m_rotateInterval(86400) {
     tzset();
@@ -143,12 +143,12 @@ void Logger::vlog(int level, const char *fmt, va_list args){
             m_filename.c_str(), err, strerror(errno));
     }
     //错误级别日志写入syslog
-    if(level <= ERROR){
-        syslog(LOG_ERR, "%s", buffer + 35);
-    }
+    // if(level <= ERROR){
+    //     syslog(LOG_ERR, "%s", buffer + 35);
+    // }
 }
 
-void logger_vlog(int level, const char *fmt, ...){
+void Logger::logv(int level, const char *fmt, ...){
     if (level > Logger::getLogger().getLogLevel()) { 
         return;
     }

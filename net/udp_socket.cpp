@@ -146,13 +146,13 @@ bool UdpSocket::Listen(int port, int backlog, SocketContainer *pContainer, Packe
 SocketBase* UdpSocket::Connect(uint32_t ip, int port, SocketContainer *pContainer, PacketHandler* handler){
     int fd = socket(AF_INET,SOCK_DGRAM,0);
     if(fd == -1){
-        LOG_ERROR("udp %s %s:%u",strerror(errno), Util::UintIP2String(ip).c_str(), port);
+        LOG_ERROR("udp %s %s:%u",strerror(errno), UintIP2String(ip).c_str(), port);
         return nullptr; 
     }
 
     int flags = fcntl(fd, F_GETFL, 0);
     if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
-        LOG_ERROR("udp fd:%d %s %s:%u",fd,strerror(errno), Util::UintIP2String(ip).c_str(), port);
+        LOG_ERROR("udp fd:%d %s %s:%u",fd,strerror(errno), UintIP2String(ip).c_str(), port);
         return nullptr;
     }
 
@@ -167,13 +167,13 @@ SocketBase* UdpSocket::Connect(uint32_t ip, int port, SocketContainer *pContaine
     s->SetCreateTime(time(NULL));
     s->SetLastAccessTime(s->GetCreateTime());
     s->SetPeerAddr(peerAddr);
-	LOG_DEBUG("udp fd:%d socket:%p new socket %s:%u", fd, s, Util::UintIP2String(ip).c_str(), port);
+	LOG_DEBUG("udp fd:%d socket:%p new socket %s:%u", fd, s, UintIP2String(ip).c_str(), port);
     s->SetState(SocketState::connected);
     if(pContainer->AddSocket(s, SOCKET_EVENT_READ|SOCKET_EVENT_ERROR)){
         return s;
     }
 
-    LOG_ERROR("udp fd:%d socket:%p %s %s:%u",fd, s, strerror(errno), Util::UintIP2String(ip).c_str(), port);
+    LOG_ERROR("udp fd:%d socket:%p %s %s:%u",fd, s, strerror(errno), UintIP2String(ip).c_str(), port);
     s->Close();
     return nullptr;
 }

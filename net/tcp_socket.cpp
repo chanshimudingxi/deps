@@ -319,24 +319,32 @@ void TcpSocket::Write() {
         int n = send(m_fd, m_output->data(), m_output->size(), 0);
         if (n == -1) {
             //没发完的需要等下次可以发的时候继续发
-            if(errno == EAGAIN && 
-                m_container->ModSocket(this, SOCKET_EVENT_READ|SOCKET_EVENT_WRITE|SOCKET_EVENT_ERROR)){
-                LOG_DEBUG("tcp fd:%d socket:%p resend", m_fd, this);
-                return;
+            if(errno == EAGAIN){
+                if(!m_container->ModSocket(this, SOCKET_EVENT_READ|SOCKET_EVENT_WRITE|SOCKET_EVENT_ERROR)){
+                    LOG_ERROR("tcp fd:%d socket:%p %s", m_fd, this, strerror(errno));
+                    Close();
+                }
+                else{
+                    LOG_DEBUG("tcp fd:%d socket:%p resend", m_fd, this);
+                    m_isResending = true;
+                }
             }
             else{
                 LOG_ERROR("tcp fd:%d socket:%p %s", m_fd, this, strerror(errno));
                 Close();
-                return;
             }
+            return;
         }
         else{
             m_output->erase(0, n);
             if(m_output->size() <= 0){
                 //全部都发完了就不需要再关注可写事件
-                if(!m_container->ModSocket(this, SOCKET_EVENT_READ|SOCKET_EVENT_ERROR)){
-                    LOG_ERROR("tcp fd:%d socket:%p %s", m_fd, this, strerror(errno));
-                    Close();
+                if(m_isResending){
+                    m_isResending = false;
+                    if(!m_container->ModSocket(this, SOCKET_EVENT_READ|SOCKET_EVENT_ERROR)){
+                        LOG_ERROR("tcp fd:%d socket:%p %s", m_fd, this, strerror(errno));
+                        Close();
+                    }
                 }
                 return;
             }

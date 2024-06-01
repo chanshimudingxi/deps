@@ -44,5 +44,6 @@ private:
     bool EnableTcpNoDelay();
     BlockBuffer<def_block_alloc_4k, 1024>* m_input;              //接收缓冲区
     BlockBuffer<def_block_alloc_4k, 1024>* m_output;             //发送缓冲区
+    bool m_isResending;                                          //是否正在重发
 };
 }

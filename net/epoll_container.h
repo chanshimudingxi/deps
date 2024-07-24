@@ -2,6 +2,7 @@
 
 #include <string>
 #include <set>
+#include <map>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -36,7 +37,6 @@ public:
 	virtual int  SocketNum();
 
     SocketBase* GetSocket(int fd);
-    bool Init();
 private:
     void CheckTimeoutSocket();
 	void CheckCloseSocket();
@@ -48,6 +48,7 @@ private:
     * 然后回绕
     */
     SocketBase** m_socketArray;
+    std::map<int, SocketBase*> m_socketMap;
     int m_epfd;    //管理描述符对应事件的容器
 #ifdef __APPLE__
     struct kevent *m_events;

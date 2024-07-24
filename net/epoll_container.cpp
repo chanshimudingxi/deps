@@ -10,10 +10,18 @@ using namespace deps;
 EpollContainer::EpollContainer(int maxFdCount, int maxFdEventWaitTime){
     m_maxFdCount = maxFdCount;
     m_maxFdEventWaitTime = maxFdEventWaitTime;
-    m_socketArray = NULL;
-    m_epfd = 0;
 	m_socketNum = 0;
-    m_events = NULL;
+    
+	//系统多路复用描述符初始化
+#ifdef __APPLE__
+    //创建kqueue，与epoll类似
+    m_events = new struct kevent[m_maxFdCount];
+    m_epfd = kqueue();
+#else
+    m_events = new struct epoll_event[m_maxFdCount];
+    m_epfd = epoll_create(m_maxFdCount);
+#endif
+    assert(m_epfd != -1);
 }
 
 EpollContainer::~EpollContainer(){
@@ -21,11 +29,20 @@ EpollContainer::~EpollContainer(){
 
 bool EpollContainer::AddSocket(SocketBase* s, uint64_t events)
 {
+    if(m_socketMap.size() >= m_maxFdCount){
+        LOG_ERROR("socket container is full");
+        return false;
+    }
+
     if(nullptr == s){
+        LOG_ERROR("socket is null");
         return false;
     }
     int fd = s->GetFd();
-    m_socketArray[fd] = s;
+    if(m_socketMap.find(fd) != m_socketMap.end()){
+        LOG_ERROR("fd:%d socket:%p already in socket container", fd, s);
+        return false;
+    }
     
     int ret = 0;
 #ifdef __APPLE__
@@ -71,6 +88,7 @@ bool EpollContainer::AddSocket(SocketBase* s, uint64_t events)
         return false;
     }
     LOG_DEBUG("fd:%d socket:%p add events:%lx success", fd, s, events);
+    m_socketMap[fd] = s;
 	m_socketNum++;
     return true;
 }
@@ -78,12 +96,12 @@ bool EpollContainer::AddSocket(SocketBase* s, uint64_t events)
 bool EpollContainer::ModSocket(SocketBase* s, uint64_t events)
 {
     if(nullptr == s){
-        LOG_DEBUG("socket is null");
+        LOG_ERROR("socket is null");
         return false;
     }
     int fd = s->GetFd();
-    if(nullptr == m_socketArray[fd]){
-        LOG_DEBUG("fd:%d socket:%p not in socket container", fd, s);
+    if(m_socketMap.find(fd) == m_socketMap.end()){
+        LOG_ERROR("fd:%d socket:%p not in socket container", fd, s);
         return false;
     }
     int ret = 0;
@@ -154,78 +172,33 @@ bool EpollContainer::ModSocket(SocketBase* s, uint64_t events)
 bool EpollContainer::DelSocket(SocketBase* s)
 {
     if(nullptr == s){
-        return false;
+        return true;
     }
-	m_closeSockets.insert(s);
     int fd = s->GetFd();
-    m_socketArray[fd] = nullptr;
     //事件容器中删除描述符 
-    int ret = 0;
     #ifdef __APPLE__
     //Calling close() on a file descriptor will remove any kevents that reference the descriptor
     // struct kevent event[2];
-    // int n = 0;
-    // //删除Read事件，EVFILT_READ表示READ事件，操作为添加或者打开，多次重复操作没有副作用
-    // EV_SET(&event[n++], fd, EVFILT_READ, EV_DELETE, 0, 0, (void*)(intptr_t)fd);
-    // //删除Read事件，EVFILT_WRITE表示WRITE事件，操作为添加或者打开，多次重复操作没有副作用
-    // EV_SET(&event[n++], fd, EVFILT_WRITE, EV_DELETE, 0, 0, (void*)(intptr_t)fd);
-    // //调用kevent，应用更改
-    // ret = kevent(m_epfd, event, n, NULL, 0, NULL);
     #else
-    ret = epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, NULL);
+    epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, NULL);
     #endif
-    if( -1 == ret){
-        return false;
+    auto itr = m_socketMap.find(fd);
+    if(itr != m_socketMap.end()){
+        m_socketMap.erase(itr);
+        m_socketNum--;
     }
+    m_closeSockets.insert(s);
+
     LOG_DEBUG("fd:%d socket:%p rm events",fd, s);
-	m_socketNum--;
     return true;
 }
 
 SocketBase* EpollContainer::GetSocket(int fd){
-    if(fd < 0 || fd >= m_maxFdCount){
+    auto itr = m_socketMap.find(fd);
+    if(itr == m_socketMap.end()){
         return nullptr;
     }
-    return m_socketArray[fd];
-}
-
-bool EpollContainer::Init() {
-    //设置程序能够处理的最大描述符个数
-	struct rlimit rlim;
-	if (getrlimit(RLIMIT_NOFILE, &rlim) == -1) {
-        LOG_ERROR("%s",strerror(errno));
-        return false;
-    }
-	rlim_t oldlimit = rlim.rlim_cur;
-	rlim_t oldlimitmax = rlim.rlim_max;
-	rlim.rlim_max = rlim.rlim_cur = m_maxFdCount;
-	if (setrlimit(RLIMIT_NOFILE, &rlim) == -1) {
-		LOG_ERROR("%s",strerror(errno));
-        return false;
-	}
-
-    //初始化连接容器
-    m_socketArray = new SocketBase*[m_maxFdCount];
-	assert(nullptr != m_socketArray);
-
-	//系统多路复用描述符初始化
-	
-#ifdef __APPLE__
-    //创建kqueue，与epoll类似
-    m_events = new struct kevent[m_maxFdCount];
-    m_epfd = kqueue();
-#else
-    m_events = new struct epoll_event[m_maxFdCount];
-    m_epfd = epoll_create(m_maxFdCount);
-#endif
-	if (m_epfd == -1) {
-        LOG_ERROR("%s",strerror(errno));
-		return false;
-	}
-    
-	LOG_INFO("set open files old limit: %lu:%lu to limit: %d:%d success", 
-		oldlimit, oldlimitmax, m_maxFdCount, m_maxFdCount);
-    return true;
+    return itr->second;
 }
 
 void EpollContainer::HandleSockets(){
@@ -255,11 +228,7 @@ void EpollContainer::HandleSockets(){
         fd = m_events[i].data.fd;
         #endif
         
-        if(fd < 0 || fd >= m_maxFdCount){
-            LOG_ERROR("fd:%d out of range",fd);
-            continue;
-        }
-        SocketBase *s = m_socketArray[fd];//连接容器里获取描述符对应的连接
+        SocketBase *s = GetSocket(fd);//连接容器里获取描述符对应的连接
         //出现连接容器和事件容器里描述符不一致,出现逻辑bug
         if (nullptr == s) {
             LOG_ERROR("fd:%d socket:%p not in socket container",fd,s);
@@ -296,14 +265,20 @@ void EpollContainer::HandleSockets(){
 
 void EpollContainer::CheckTimeoutSocket(){
     //设置了业务层面的心跳超时检测
-    static int checkFd=0; 
-    for(int i=0; i < 1000 && i < m_maxFdCount; ++i){
-        //利用了操作系统分配描述符的规律，描述符id在[0~maxFdCount)之间
-        checkFd = checkFd < m_maxFdCount-1 ? checkFd+1 : 0;
-        SocketBase* s = m_socketArray[checkFd];
-        if (nullptr != s) {
+    static int checkFd = 0;
+    auto itr = m_socketMap.upper_bound(checkFd);
+    int checkCnt = 0;
+    while(itr != m_socketMap.end()){
+        SocketBase* s = itr->second;
+        if(nullptr != s){
             s->HandleTimeout();
         }
+        checkFd = itr->first;
+        ++checkCnt;
+        if(checkCnt > 1000){
+            break;
+        }
+        ++itr;
     }
 }
 

@@ -42,12 +42,6 @@ private:
 	void CheckCloseSocket();
 private:
 	int m_maxFdCount;//进程能够打开的描述符最大个数
-    /* 
-    * 用数组管理连接，因为进程能够打开连接小于等于描述符的最大个数
-    * 同时依赖内核分配文件描述符的策略是依次递增使用未被使用的描述符，
-    * 然后回绕
-    */
-    SocketBase** m_socketArray;
     std::map<int, SocketBase*> m_socketMap;
     int m_epfd;    //管理描述符对应事件的容器
 #ifdef __APPLE__

@@ -268,17 +268,17 @@ void EpollContainer::CheckTimeoutSocket(){
     static int checkFd = 0;
     auto itr = m_socketMap.upper_bound(checkFd);
     int checkCnt = 0;
-    while(itr != m_socketMap.end()){
+    while(itr != m_socketMap.end() && checkCnt < 1000){
+        checkFd = itr->first;
         SocketBase* s = itr->second;
         if(nullptr != s){
             s->HandleTimeout();
         }
-        checkFd = itr->first;
         ++checkCnt;
-        if(checkCnt > 1000){
-            break;
-        }
         ++itr;
+    }
+    if(itr == m_socketMap.end()){
+        checkFd = 0;
     }
 }
 

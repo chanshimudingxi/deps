@@ -5,15 +5,12 @@
 #include "marshall.h"
 
 namespace deps{
-#define RES_SUCCESS     0     //功能成功完成
-#define RES_FAIL        1     //功能失败
-
 /**
  * 注意1：协议包总大小不能超过64K
  */
 #define MAX_PACKET_SIZE 65535
-#define PROTO_HEADER_SIZE 8
-#define PAXOS_PROTO_HEADER_SIZE 6
+#define MAIN_PROTO_HEADER_SIZE 8
+#define SUB_PROTO_HEADER_SIZE 4
 
 enum MainProtoType{
     MainProtoType_Unknown = 0,
@@ -29,18 +26,17 @@ struct ProtoHeader
 };
 
 //子协议包头
-struct PaxosProtoHeader
+struct SubProtoHeader
 {
-    uint16_t m_length;
-    uint16_t m_cmd;
-    uint16_t m_resCode;
+    uint16_t m_cmd;             //子协议号
+    uint16_t m_checkCode;       //校验码
 };
 
 //message消息格式
 struct PacketHeader
 {
-	ProtoHeader m_protoHeader; //消息头
-    PaxosProtoHeader m_paxosProtoHeader; //stream_proto协议包头
+	ProtoHeader m_mainProtoHeader; //消息头
+    SubProtoHeader m_subProtoHeader; //stream_proto协议包头
 
     PacketHeader()
     {
@@ -48,97 +44,79 @@ struct PacketHeader
     }
 
     PacketHeader(const PacketHeader& header){
-        m_protoHeader.m_length = header.m_protoHeader.m_length;
-        m_protoHeader.m_cmd = header.m_protoHeader.m_cmd;
-        m_protoHeader.m_seq = header.m_protoHeader.m_seq;
-        m_paxosProtoHeader.m_cmd = header.m_paxosProtoHeader.m_cmd;
-        m_paxosProtoHeader.m_length = header.m_paxosProtoHeader.m_length;
-        m_paxosProtoHeader.m_resCode = header.m_paxosProtoHeader.m_resCode;
+        m_mainProtoHeader.m_length = header.m_mainProtoHeader.m_length;
+        m_mainProtoHeader.m_cmd = header.m_mainProtoHeader.m_cmd;
+        m_mainProtoHeader.m_seq = header.m_mainProtoHeader.m_seq;
+        m_subProtoHeader.m_cmd = header.m_subProtoHeader.m_cmd;
+        m_subProtoHeader.m_checkCode = header.m_subProtoHeader.m_checkCode;
     }
     PacketHeader& operator= (const PacketHeader& header){
-        m_protoHeader.m_length = header.m_protoHeader.m_length;
-        m_protoHeader.m_cmd = header.m_protoHeader.m_cmd;
-        m_protoHeader.m_seq = header.m_protoHeader.m_seq;
-        m_paxosProtoHeader.m_cmd = header.m_paxosProtoHeader.m_cmd;
-        m_paxosProtoHeader.m_length = header.m_paxosProtoHeader.m_length;
-        m_paxosProtoHeader.m_resCode = header.m_paxosProtoHeader.m_resCode;
+        m_mainProtoHeader.m_length = header.m_mainProtoHeader.m_length;
+        m_mainProtoHeader.m_cmd = header.m_mainProtoHeader.m_cmd;
+        m_mainProtoHeader.m_seq = header.m_mainProtoHeader.m_seq;
+        m_subProtoHeader.m_cmd = header.m_subProtoHeader.m_cmd;
+        m_subProtoHeader.m_checkCode = header.m_subProtoHeader.m_checkCode;
         return *this;
     }
 
     virtual ~PacketHeader(){}
 
     inline void clear(){
-        m_protoHeader.m_length = PROTO_HEADER_SIZE + PAXOS_PROTO_HEADER_SIZE;
-        m_protoHeader.m_cmd = MainProtoType_Paxos;
-        m_protoHeader.m_seq = 0;
-        m_paxosProtoHeader.m_cmd = 0;
-        m_paxosProtoHeader.m_length = PAXOS_PROTO_HEADER_SIZE;
-        m_paxosProtoHeader.m_resCode = RES_SUCCESS;
+        m_mainProtoHeader.m_length = MAIN_PROTO_HEADER_SIZE + SUB_PROTO_HEADER_SIZE;
+        m_mainProtoHeader.m_cmd = MainProtoType_Paxos;
+        m_mainProtoHeader.m_seq = 0;
+        m_subProtoHeader.m_cmd = 0;
+        m_subProtoHeader.m_checkCode = 0;
     }
 
     inline uint16_t getMainCmd() const 
     {
-        return m_protoHeader.m_cmd;
+        return m_mainProtoHeader.m_cmd;
     }
 
     inline void setMainCmd(uint16_t cmd)
     {
-        m_protoHeader.m_cmd = cmd;
+        m_mainProtoHeader.m_cmd = cmd;
     }
 
     inline uint32_t getSeq() const
     {
-        return m_protoHeader.m_seq;
+        return m_mainProtoHeader.m_seq;
     }
 
     inline void setSeq(uint32_t seq)
     {
-        m_protoHeader.m_seq = seq;
+        m_mainProtoHeader.m_seq = seq;
     }
 
     inline uint16_t getLength() const
     {
-        return m_protoHeader.m_length;
+        return m_mainProtoHeader.m_length;
     }
 
     inline void setLength(uint16_t len)
     {
-        m_protoHeader.m_length = len;
+        m_mainProtoHeader.m_length = len;
     }
 
     inline uint16_t getSubCmd() const 
     {
-        return m_paxosProtoHeader.m_cmd;
+        return m_subProtoHeader.m_cmd;
     }
 
     inline void setSubCmd(uint16_t cmd) 
     {
-        m_paxosProtoHeader.m_cmd = cmd;
+        m_subProtoHeader.m_cmd = cmd;
     }
 
-    inline uint16_t getSubLength() const
+    inline uint16_t getCheckCode() const
     {
-        return m_paxosProtoHeader.m_length;
+        return m_subProtoHeader.m_checkCode;
     }
 
-    inline void setSubLength(uint16_t len)
+    inline void setCheckCode(uint16_t checkcode)
     {
-        m_paxosProtoHeader.m_length = len;
-    }
-
-    inline uint16_t getResCode() const 
-    {
-        return m_paxosProtoHeader.m_resCode;
-    }
-
-    inline void setResCode(uint16_t res)
-    {
-        m_paxosProtoHeader.m_resCode = res;
-    }
-
-    inline bool isSuccess() const
-    {
-        return m_paxosProtoHeader.m_resCode == RES_SUCCESS;
+        m_subProtoHeader.m_checkCode = checkcode;
     }
 };
 
@@ -147,12 +125,12 @@ struct PacketHeader
 struct Encoder
 {
 public:
-    Encoder():m_packetHeader(), pb(), headPack(pb, 0), bodyPack(pb, PROTO_HEADER_SIZE + PAXOS_PROTO_HEADER_SIZE){}
+    Encoder():m_packetHeader(), pb(), headPack(pb, 0), bodyPack(pb, MAIN_PROTO_HEADER_SIZE + SUB_PROTO_HEADER_SIZE){}
     
-    Encoder(const Encoder &s):m_packetHeader(), pb(),headPack(pb, 0), bodyPack(pb, PROTO_HEADER_SIZE + PAXOS_PROTO_HEADER_SIZE)
+    Encoder(const Encoder &s):m_packetHeader(), pb(),headPack(pb, 0), bodyPack(pb, MAIN_PROTO_HEADER_SIZE + SUB_PROTO_HEADER_SIZE)
     {
         m_packetHeader = s.m_packetHeader;
-        headPack.replace(0, s.headPack.data(), PROTO_HEADER_SIZE + PAXOS_PROTO_HEADER_SIZE);
+        headPack.replace(0, s.headPack.data(), MAIN_PROTO_HEADER_SIZE + SUB_PROTO_HEADER_SIZE);
         bodyPack.push(s.bodyPack.data(), s.bodyPack.size());
     }
 
@@ -165,7 +143,7 @@ public:
 
     size_t size()
     {
-        return PROTO_HEADER_SIZE + PAXOS_PROTO_HEADER_SIZE + bodySize();
+        return MAIN_PROTO_HEADER_SIZE + SUB_PROTO_HEADER_SIZE + bodySize();
     }
 
     const char* body()
@@ -180,7 +158,7 @@ public:
 
     void clear()
     {
-        pb.resize(0 + PROTO_HEADER_SIZE + PAXOS_PROTO_HEADER_SIZE);
+        pb.resize(0 + MAIN_PROTO_HEADER_SIZE + SUB_PROTO_HEADER_SIZE);
         m_packetHeader.clear();
     }
 
@@ -192,22 +170,18 @@ public:
         m_packetHeader.setSeq(seq);
     }
 
-    void setResCode(uint16_t resCode = RES_SUCCESS){
-        m_packetHeader.setResCode(resCode);
-    }
-
-    void serialize(uint16_t subCmd, const Marshallable &m)
+    void serialize(uint16_t subCmd, const Marshallable &m, uint16_t (*check_code_func)(char* data, size_t size) = nullptr)
     {
         m.marshal(bodyPack);
+        uint16_t checkcode = check_code_func ? check_code_func(bodyPack.data(), bodyPack.size()) : 0;
         m_packetHeader.setLength(size());
-        m_packetHeader.setSubLength(size()-PROTO_HEADER_SIZE);
         m_packetHeader.setSubCmd(subCmd);
+        m_packetHeader.setCheckCode(checkcode);
         headPack.replace_uint16(0, m_packetHeader.getLength());
         headPack.replace_uint16(2, m_packetHeader.getMainCmd());
         headPack.replace_uint32(4, m_packetHeader.getSeq());
-        headPack.replace_uint16(8, m_packetHeader.getSubLength());
-        headPack.replace_uint16(10, m_packetHeader.getSubCmd());
-        headPack.replace_uint16(12, m_packetHeader.getResCode());
+        headPack.replace_uint16(8, m_packetHeader.getSubCmd());
+        headPack.replace_uint16(10, m_packetHeader.getCheckCode());
     }
 private:
     PacketHeader m_packetHeader;
@@ -220,16 +194,15 @@ private:
 class Decoder
 {
 public:
-    static size_t minSize(){return PROTO_HEADER_SIZE + PAXOS_PROTO_HEADER_SIZE;}
+    static size_t minSize(){return MAIN_PROTO_HEADER_SIZE + SUB_PROTO_HEADER_SIZE;}
     static size_t maxSize(){return MAX_PACKET_SIZE;}
-    static size_t mainHeaderSize(){return PROTO_HEADER_SIZE;}
-    static size_t headerSize(){return PROTO_HEADER_SIZE + PAXOS_PROTO_HEADER_SIZE;}
+    static size_t mainHeaderSize(){return MAIN_PROTO_HEADER_SIZE;}
+    static size_t headerSize(){return MAIN_PROTO_HEADER_SIZE + SUB_PROTO_HEADER_SIZE;}
     static uint16_t pickLen(const void * data){uint16_t i = *((uint16_t*)data);return XHTONS(i);};
     static uint16_t pickCmd(const void * data){uint16_t i = *((uint16_t*)((char*)data+2));return XHTONS(i);};
     static uint32_t pickSeq(const char *data){uint32_t i = *((uint32_t*)((char*)data+4)); return XHTONL(i);};
-    static uint16_t pickSubLen(const void * data){uint16_t i = *((uint16_t*)((char*)data+8));return XHTONS(i);};
-    static uint16_t pickSubCmd(const void * data){uint16_t i = *((uint16_t*)((char*)data+10));return XHTONS(i);};
-    static uint16_t pickResCode(const char *data){uint16_t i = *((uint16_t*)((char*)data+12)); return XHTONS(i);};
+    static uint16_t pickSubCmd(const void * data){uint16_t i = *((uint16_t*)((char*)data+8));return XHTONS(i);};
+    static uint16_t pickCheckCode(const char *data){uint16_t i = *((uint16_t*)((char*)data+10)); return XHTONS(i);};
 
     Decoder(const char *data, uint16_t sz):up(data, sz){};
     virtual ~Decoder(){};
@@ -239,9 +212,8 @@ public:
         packetHeader.setLength(up.pop_uint16());
         packetHeader.setMainCmd(up.pop_uint16());
         packetHeader.setSeq(up.pop_uint32());
-        packetHeader.setSubLength(up.pop_uint16());
         packetHeader.setSubCmd(up.pop_uint16());
-        packetHeader.setResCode(up.pop_uint16());
+        packetHeader.setCheckCode(up.pop_uint16());
         msg.unmarshal(up);
     }
 private:

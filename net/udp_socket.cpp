@@ -179,7 +179,9 @@ SocketBase* UdpSocket::Connect(uint32_t ip, int port, SocketContainer *pContaine
 }
 
 void UdpSocket::Close(){
-	m_handler->HandleClose(this);
+    if(m_handler){
+        m_handler->HandleClose(this);
+    }
     //连接容器中删除描述符
     m_container->DelSocket(this);
 
@@ -220,7 +222,10 @@ void UdpSocket::Read(char* max_read_buffer, size_t max_read_size){
 	else{
 		m_input->append(max_read_buffer, n);
 		
-		int pn = HandlePacket(m_input->data(), m_input->size());
+		int pn = 0;
+        if(m_handler){
+            pn = m_handler->HandlePacket(m_input->data(), m_input->size(), this);
+        }
 
 		if(pn > 0){
 			m_input->erase(0,pn);
@@ -261,8 +266,4 @@ bool UdpSocket::SendPacket(const char* data, size_t size){
 	else{
 		return true;
 	}
-}
-
-int UdpSocket::HandlePacket(const char* data, size_t size){
-	return m_handler->HandlePacket(data, size, this);
 }

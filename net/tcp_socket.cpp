@@ -291,7 +291,11 @@ void TcpSocket::Read(char* max_read_buffer, size_t max_read_size) {
 	else{
 		m_input->append(max_read_buffer, n);
 		
-		int pn = HandlePacket(m_input->data(), m_input->size());
+        int pn = 0;
+
+        if(m_handler){
+            m_handler->HandlePacket(m_input->data(), m_input->size(), this);
+        }
 
 		if(pn > 0){
 			m_input->erase(0,pn);
@@ -353,7 +357,9 @@ void TcpSocket::Write() {
 }
 
 void TcpSocket::Close(){
-	m_handler->HandleClose(this);
+    if(m_handler){
+        m_handler->HandleClose(this);
+    }
 
     //删除容器存储的数据
     m_container->DelSocket(this);
@@ -383,8 +389,4 @@ bool TcpSocket::SendPacket(const char* data, size_t size){
         return true;
     }
     return false;
-}
-
-int TcpSocket::HandlePacket(const char* data, size_t size){
-	return m_handler->HandlePacket(data, size, this);
 }

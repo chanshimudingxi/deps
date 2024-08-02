@@ -69,7 +69,6 @@ public:
     virtual void HandleError() = 0;
     virtual void HandleTimeout() = 0;
     virtual bool SendPacket(const char* data, size_t size) = 0;
-    virtual int HandlePacket(const char* data, size_t size) = 0;
     virtual void Close() = 0;
     void SetFd(int fd){m_fd = fd;}
     int GetFd(){return m_fd;}

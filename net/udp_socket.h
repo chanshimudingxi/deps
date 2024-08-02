@@ -35,7 +35,6 @@ public:
     virtual void HandleTimeout();
 
     virtual bool SendPacket(const char* data, size_t size);
-    virtual int HandlePacket(const char* data, size_t size);
     virtual void Close();
 private:
     void Read(char* max_read_buffer, size_t max_read_size);
